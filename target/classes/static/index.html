@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categorías de Fútbol</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!-- Pantalla de Inicio -->
+        <section id="landing" class="view">
+            <div class="glass-card">
+                <h1 class="glow-text">Categorías de Fútbol</h1>
+                <p class="subtitle">¿Quién eres hoy?</p>
+                <div class="input-group">
+                    <input type="text" id="playerName" placeholder="Tu Nombre" maxlength="15">
+                </div>
+                <div class="actions">
+                    <button id="btnCreateRoom" class="primary-btn">Crear Sala</button>
+                    <div class="divider"><span>O unirse a una</span></div>
+                    <div class="input-group">
+                        <input type="text" id="joinCode" placeholder="Cód. de Sala" maxlength="4">
+                        <button id="btnJoinRoom" class="secondary-btn">Unirse</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lobby de Espera -->
+        <section id="lobby" class="view hidden">
+            <div class="glass-card">
+                <h2>Sala: <span id="displayRoomCode" class="highlight">----</span></h2>
+                <p>Esperando a los jugadores...</p>
+                <ul id="playerList"></ul>
+
+                <!-- Añadir Categoría (Visible para todos) -->
+                <div id="addCategorySection">
+                    <div class="input-group">
+                        <input type="text" id="newCategoryName"
+                            placeholder="Nueva Categoría (ej: Ganadores de 2 Mundiales)">
+                        <button id="btnAddCategory" class="secondary-btn">Añadir</button>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button id="btnStartGame" class="primary-btn hidden">Empezar Juego</button>
+                    <p id="waitingMsg" class="hint">Solo el anfitrión puede empezar</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pantalla de Juego -->
+        <section id="game" class="view hidden">
+            <div class="game-container">
+                <header class="game-header">
+                    <div class="room-info">SALA: <span id="gameRoomCode">----</span></div>
+                    <div id="myStatus" class="player-badge">Adivinando...</div>
+                    <button id="btnResetGame" class="secondary-btn hidden">🔄 Volver a Jugar</button>
+                </header>
+
+                <main class="game-grid">
+                    <!-- Otros Jugadores -->
+                    <div class="players-section">
+                        <div class="section-header">
+                            <h3>Otros Jugadores</h3>
+                            <div id="turnCircleContainer" class="turn-circle-container">
+                                <svg width="120" height="120" viewBox="0 0 120 120">
+                                    <defs>
+                                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5"
+                                            orient="auto">
+                                            <polygon points="0 0, 10 3.5, 0 7" fill="rgba(255,255,255,0.3)" />
+                                        </marker>
+                                    </defs>
+                                    <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(255,255,255,0.05)"
+                                        stroke-width="1" stroke-dasharray="4 4" />
+                                    <!-- Flecha de dirección horaria -->
+                                    <path d="M 60 15 A 45 45 0 0 1 105 60" fill="none" stroke="rgba(0, 242, 255, 0.2)"
+                                        stroke-width="2" marker-end="url(#arrowhead)" />
+                                </svg>
+                                <!-- Nombres dinámicos aquí -->
+                            </div>
+                        </div>
+                        <div id="otherPlayers" class="players-grid"></div>
+                    </div>
+
+                    <!-- Mi Sección -->
+                    <div class="my-section glass-card">
+                        <h3>¿Quién eres tú?</h3>
+                        <div class="secret-card">
+                            <span class="lock-icon">🔒</span>
+                            <p>Tú no sabes qué categoría eres.</p>
+                            <p class="hint">Tus amigos te darán pistas.</p>
+                        </div>
+                        <div class="notes-area">
+                            <label for="myNotes">Tus Notas:</label>
+                            <textarea id="myNotes" placeholder="Escribe pistas aquí..."></textarea>
+                        </div>
+                        <div class="guess-actions">
+                            <button id="btnGuess" class="guess-btn">¡Adivinar!</button>
+                        </div>
+                    </div>
+                </main>
+
+                <!-- Podio de Ganadores -->
+                <div id="podiumArea" class="podium-area hidden">
+                    <div class="podium-container glass-card">
+                        <h3>🏆 Podio de Ganadores</h3>
+                        <div id="podiumList" class="podium-list"></div>
+                    </div>
+                </div>
+
+                <!-- Área de Votación / Validación -->
+                <div id="votingArea" class="hidden">
+                    <div class="glass-card voting-card">
+                        <p id="votingMsg">¿Es correcto?</p>
+                        <div class="voting-btns">
+                            <button id="btnVoteCorrect" class="vote-correct">SÍ ✅</button>
+                            <button id="btnVoteIncorrect" class="vote-incorrect">NO ❌</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal para Adivinar -->
+    <div id="guessModal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <h3>¿Qué categoría eres?</h3>
+            <input type="text" id="guessName" placeholder="Título de la categoría">
+            <div class="modal-buttons">
+                <button id="btnSubmitGuess" class="primary-btn">Confirmar</button>
+                <button id="btnCancelGuess" class="cancel-btn">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

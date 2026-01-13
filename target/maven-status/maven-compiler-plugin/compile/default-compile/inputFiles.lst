@@ -1,0 +1,10 @@
+/Users/JMESA1/Desktop/soccer-game/src/main/java/com/example/soccergame/repository/GameRoomRepository.java
+/Users/JMESA1/Desktop/soccer-game/src/main/java/com/example/soccergame/model/GamePlayer.java
+/Users/JMESA1/Desktop/soccer-game/src/main/java/com/example/soccergame/model/SoccerCharacter.java
+/Users/JMESA1/Desktop/soccer-game/src/main/java/com/example/soccergame/repository/SoccerCharacterRepository.java
+/Users/JMESA1/Desktop/soccer-game/src/main/java/com/example/soccergame/repository/GamePlayerRepository.java
+/Users/JMESA1/Desktop/soccer-game/src/main/java/com/example/soccergame/SoccerGameApplication.java
+/Users/JMESA1/Desktop/soccer-game/src/main/java/com/example/soccergame/controller/RoomController.java
+/Users/JMESA1/Desktop/soccer-game/src/main/java/com/example/soccergame/model/GameRoom.java
+/Users/JMESA1/Desktop/soccer-game/src/main/java/com/example/soccergame/service/GameService.java
+/Users/JMESA1/Desktop/soccer-game/src/main/java/com/example/soccergame/config/WebSocketConfig.java
