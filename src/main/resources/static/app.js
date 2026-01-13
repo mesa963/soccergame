@@ -96,17 +96,28 @@ async function addNewCategory() {
 let socket = null;
 
 function connectWebSocket(roomCode) {
-    if (stompClient && stompClient.connected) return;
+    // Si ya hay un cliente intentando conectar o conectado, verificar estado.
+    if (stompClient && stompClient.connected) {
+        console.log("Ya conectado, suscribiendo a nueva sala si es necesario...");
+        // Re-suscribir si cambia la sala (lógica simplificada)
+        stompClient.subscribe('/topic/room/' + roomCode, function (msg) {
+            handleGameUpdate(msg.body);
+        });
+        return;
+    }
 
-    console.log("Intentando conectar WebSocket...");
+    console.log("Iniciando conexión WebSocket...");
     socket = new SockJS('/ws-game');
     stompClient = Stomp.over(socket);
-    stompClient.debug = null; // Desactivar logs de debug ruidosos
+    // stompClient.debug = null; // Comentado para ver logs si falla
 
     stompClient.connect({}, function (frame) {
         console.log('WS Conectado: ' + frame);
-        document.getElementById('connectionStatus').innerText = "🟢 Conectado";
-        document.getElementById('connectionStatus').classList.remove('disconnected');
+        const statusEl = document.getElementById('connectionStatus');
+        if (statusEl) {
+            statusEl.innerText = "🟢 Conectado";
+            statusEl.classList.remove('disconnected');
+        }
 
         stompClient.subscribe('/topic/room/' + roomCode, function (msg) {
             handleGameUpdate(msg.body);
@@ -120,8 +131,11 @@ function connectWebSocket(roomCode) {
 
     }, function (error) {
         console.error('WS Error/Desconexión:', error);
-        document.getElementById('connectionStatus').innerText = "🔴 Desconectado (Reintentando...)";
-        document.getElementById('connectionStatus').classList.add('disconnected');
+        const statusEl = document.getElementById('connectionStatus');
+        if (statusEl) {
+            statusEl.innerText = "🔴 Desconectado (Reintentando...)";
+            statusEl.classList.add('disconnected');
+        }
 
         // Reintentar en 3 segundos
         setTimeout(() => connectWebSocket(roomCode), 3000);
