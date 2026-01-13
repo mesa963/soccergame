@@ -93,14 +93,38 @@ async function addNewCategory() {
 }
 
 // WebSocket Logic
+let socket = null;
+
 function connectWebSocket(roomCode) {
-    const socket = new SockJS('/ws-game');
+    if (stompClient && stompClient.connected) return;
+
+    console.log("Intentando conectar WebSocket...");
+    socket = new SockJS('/ws-game');
     stompClient = Stomp.over(socket);
+    stompClient.debug = null; // Desactivar logs de debug ruidosos
+
     stompClient.connect({}, function (frame) {
-        console.log('WS Connected: ' + frame);
+        console.log('WS Conectado: ' + frame);
+        document.getElementById('connectionStatus').innerText = "🟢 Conectado";
+        document.getElementById('connectionStatus').classList.remove('disconnected');
+
         stompClient.subscribe('/topic/room/' + roomCode, function (msg) {
             handleGameUpdate(msg.body);
         });
+
+        // Al reconectar, pedir el estado actual por si nos perdimos algo
+        if (currentRoom) {
+            if (currentRoom.status === 'WAITING') refreshLobby();
+            else refreshGameState();
+        }
+
+    }, function (error) {
+        console.error('WS Error/Desconexión:', error);
+        document.getElementById('connectionStatus').innerText = "🔴 Desconectado (Reintentando...)";
+        document.getElementById('connectionStatus').classList.add('disconnected');
+
+        // Reintentar en 3 segundos
+        setTimeout(() => connectWebSocket(roomCode), 3000);
     });
 }
 

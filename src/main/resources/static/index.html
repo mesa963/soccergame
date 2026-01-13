@@ -36,7 +36,11 @@
         <section id="lobby" class="view hidden">
             <div class="glass-card">
                 <h2>Sala: <span id="displayRoomCode" class="highlight">----</span></h2>
-                <p>Esperando a los jugadores...</p>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <p>Esperando a los jugadores...</p>
+                    <button class="secondary-btn small-btn" onclick="refreshLobby()"
+                        style="font-size: 0.8em; padding: 5px 10px;">↻ Actualizar</button>
+                </div>
                 <ul id="playerList"></ul>
 
                 <!-- Añadir Categoría (Visible para todos) -->
