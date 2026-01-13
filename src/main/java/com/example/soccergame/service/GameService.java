@@ -19,17 +19,18 @@ public class GameService {
         private GamePlayerRepository playerRepository;
 
         @Autowired
-        private SoccerCharacterRepository characterRepository;
+        private CategoryItemRepository characterRepository;
 
         @Autowired
         private SimpMessagingTemplate messagingTemplate;
 
         @Transactional
-        public GameRoom createRoom(String playerName) {
+        public GameRoom createRoom(String playerName, String packType) {
                 String roomCode = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
                 GameRoom room = new GameRoom();
                 room.setRoomCode(roomCode);
                 room.setStatus(GameRoom.RoomStatus.WAITING);
+                room.setSelectedPack(packType != null ? packType : "SOCCER"); // Default to SOCCER
                 room = roomRepository.save(room);
 
                 GamePlayer player = new GamePlayer();
@@ -68,7 +69,8 @@ public class GameService {
                                 .orElseThrow(() -> new RuntimeException("Room not found"));
 
                 List<GamePlayer> players = room.getPlayers();
-                List<SoccerCharacter> characters = characterRepository.findAll();
+                // Filter by the room's selected pack
+                List<CategoryItem> characters = characterRepository.findByPackType(room.getSelectedPack());
 
                 if (characters.size() < players.size()) {
                         throw new RuntimeException("Not enough characters in DB");
@@ -179,7 +181,7 @@ public class GameService {
                                 .orElseThrow(() -> new RuntimeException("Room not found"));
 
                 List<GamePlayer> players = room.getPlayers();
-                List<SoccerCharacter> characters = characterRepository.findAll();
+                List<CategoryItem> characters = characterRepository.findByPackType(room.getSelectedPack());
 
                 if (characters.size() < players.size()) {
                         throw new RuntimeException("Not enough characters in DB");
@@ -218,7 +220,8 @@ public class GameService {
                 GamePlayer target = playerRepository.findById(targetId)
                                 .orElseThrow(() -> new RuntimeException("Target player not found"));
 
-                List<SoccerCharacter> characters = characterRepository.findAll();
+                // Reshuffle from the same pack
+                List<CategoryItem> characters = characterRepository.findByPackType(target.getRoom().getSelectedPack());
                 Collections.shuffle(characters);
 
                 // Assign a new random character (category)
@@ -230,35 +233,89 @@ public class GameService {
         }
 
         @Transactional
-        public void addCustomCategory(String categoryName) {
-                SoccerCharacter category = new SoccerCharacter(null, categoryName, "", "", "");
+        public void addCustomCategory(String categoryName, String packType) {
+                CategoryItem category = new CategoryItem(null, categoryName, packType, "", "");
                 characterRepository.save(category);
         }
 
         public void seedCharacters() {
                 if (characterRepository.count() == 0) {
-                        List<SoccerCharacter> characters = Arrays.asList(
-                                        new SoccerCharacter(null, "Ganadores de Copa América y Mundial", "", "", ""),
-                                        new SoccerCharacter(null, "Jugadores con 3 Champions en clubes distintos", "",
-                                                        "", ""),
-                                        new SoccerCharacter(null, "Goleadores en 4 ligas top de Europa", "", "", ""),
-                                        new SoccerCharacter(null, "Porteros con un gol oficial de campo", "", "", ""),
-                                        new SoccerCharacter(null, "Jugadores que jugaron en Real Madrid y Barcelona",
-                                                        "", "", ""),
-                                        new SoccerCharacter(null, "Ganadores de Balón de Oro africanos", "", "", ""),
-                                        new SoccerCharacter(null, "Jugadores con más de 100 goles en su selección", "",
-                                                        "", ""),
-                                        new SoccerCharacter(null, "Campeones del mundo como jugador y entrenador", "",
-                                                        "", ""),
-                                        new SoccerCharacter(null, "Ganadores de Libertadores y Champions League", "",
-                                                        "", ""),
-                                        new SoccerCharacter(null, "Jugadores que usaron el dorsal 10 en Brasil", "", "",
-                                                        ""),
-                                        new SoccerCharacter(null, "Fichajes de más de 100 millones de euros", "", "",
-                                                        ""),
-                                        new SoccerCharacter(null, "Jugadores que nunca recibieron una tarjeta roja", "",
-                                                        "", ""));
-                        characterRepository.saveAll(characters);
+                        List<CategoryItem> items = new ArrayList<>();
+
+                        // SOCCER PACK
+                        items.add(new CategoryItem(null, "Ganadores de Copa América y Mundial", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Jugadores con 3 Champions en clubes distintos", "SOCCER", "",
+                                        ""));
+                        items.add(new CategoryItem(null, "Goleadores en 4 ligas top de Europa", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Porteros con un gol oficial de campo", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Jugadores de Real Madrid y Barcelona", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Ganadores de Balón de Oro africanos", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Jugadores con +100 goles en selección", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Campeones como jugador y entrenador", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Ganadores de Libertadores y Champions", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Jugadores con dorsal 10 en Brasil", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Fichajes de +100 millones de euros", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Jugadores sin tarjeta roja en su carrera", "SOCCER", "", ""));
+
+                        // MOVIES PACK
+                        items.add(new CategoryItem(null, "Ganadores del Oscar a Mejor Director", "MOVIES", "", ""));
+                        items.add(new CategoryItem(null, "Películas de Marvel con más de 1B en taquilla", "MOVIES", "",
+                                        ""));
+                        items.add(new CategoryItem(null, "Actores que han interpretado al Joker", "MOVIES", "", ""));
+                        items.add(new CategoryItem(null, "Películas de terror slasher clásicas", "MOVIES", "", ""));
+                        items.add(new CategoryItem(null, "Ganadoras del Oscar a Mejor Película Animada", "MOVIES", "",
+                                        ""));
+                        items.add(new CategoryItem(null, "Trilogías famosas de ciencia ficción", "MOVIES", "", ""));
+                        items.add(new CategoryItem(null, "Villanos icónicos de Disney", "MOVIES", "", ""));
+                        items.add(new CategoryItem(null, "Directores mexicanos ganadores del Oscar", "MOVIES", "", ""));
+                        items.add(new CategoryItem(null, "Películas protagonizadas por Tom Hanks", "MOVIES", "", ""));
+
+                        characterRepository.saveAll(items);
                 }
+        }
+        // ADMIN METHODS
+
+        public List<CategoryItem> getAllCategories() {
+                return characterRepository.findAll();
+        }
+
+        public List<GameRoom> getAllRooms() {
+                return roomRepository.findAll();
+        }
+
+        @Transactional
+        public void deleteRoom(String roomCode) {
+                GameRoom room = roomRepository.findByRoomCode(roomCode).orElse(null);
+                if (room != null) {
+                        roomRepository.delete(room);
+                }
+        }
+
+        @Transactional
+        public void deleteCategoryItem(Long id) {
+                if (characterRepository.existsById(id)) {
+                        characterRepository.deleteById(id);
+                }
+        }
+
+        @Transactional
+        public void updateCategoryItem(Long id, String name, String packType) {
+                CategoryItem item = characterRepository.findById(id).orElse(null);
+                if (item != null) {
+                        item.setName(name);
+                        item.setPackType(packType);
+                        characterRepository.save(item);
+                }
+        }
+
+        public List<String> getAllPacks() {
+                List<CategoryItem> all = characterRepository.findAll();
+                Set<String> packs = new HashSet<>();
+                for (CategoryItem item : all) {
+                        if (item.getPackType() != null) {
+                                packs.add(item.getPackType());
+                        }
+                }
+                return new ArrayList<>(packs);
         }
 }

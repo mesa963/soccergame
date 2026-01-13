@@ -1,13 +1,14 @@
 package com.example.soccergame.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import javax.persistence.*;
 
 @Entity
-@Table(name = "PLAYERS")
+@Table(name = "SC_PLAYERS")
 public class GamePlayer {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "player_seq")
+    @SequenceGenerator(name = "player_seq", sequenceName = "PLAYER_SEQ", allocationSize = 1)
     private Long id;
 
     private String name;
@@ -19,7 +20,7 @@ public class GamePlayer {
 
     @ManyToOne
     @JoinColumn(name = "character_id")
-    private SoccerCharacter assignedCharacter;
+    private CategoryItem assignedCharacter;
 
     @Column(length = 2000)
     private String notes;
@@ -56,11 +57,11 @@ public class GamePlayer {
         this.room = room;
     }
 
-    public SoccerCharacter getAssignedCharacter() {
+    public CategoryItem getAssignedCharacter() {
         return assignedCharacter;
     }
 
-    public void setAssignedCharacter(SoccerCharacter assignedCharacter) {
+    public void setAssignedCharacter(CategoryItem assignedCharacter) {
         this.assignedCharacter = assignedCharacter;
     }
 

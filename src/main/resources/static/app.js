@@ -24,7 +24,8 @@ function showView(viewName) {
 // REST API calls
 async function createRoom(playerName) {
     try {
-        const res = await fetch(`/api/rooms/create?playerName=${encodeURIComponent(playerName)}`, { method: 'POST' });
+        const packType = document.getElementById('packType').value || "SOCCER";
+        const res = await fetch(`/api/rooms/create?playerName=${encodeURIComponent(playerName)}&packType=${packType}`, { method: 'POST' });
         const room = await res.json();
         currentRoom = room;
         currentPlayer = room.players[0]; // The host
@@ -496,3 +497,37 @@ function debounce(func, wait) {
         timeout = setTimeout(() => func.apply(this, arguments), wait);
     };
 }
+
+function copyRoomCode() {
+    const code = document.getElementById('displayRoomCode').innerText;
+    if (code && code !== '----') {
+        navigator.clipboard.writeText(code).then(() => {
+            showNotification("Código copiado! 📋");
+        });
+    }
+}
+
+// Dynamic Packs
+async function loadPacks() {
+    try {
+        const res = await fetch('/api/admin/packs');
+        if (res.ok) {
+            const packs = await res.json();
+            const select = document.getElementById('packType');
+            if (select && packs.length > 0) {
+                select.innerHTML = packs.map(p =>
+                    `<option value="${p}">${getPackEmoji(p)} ${p}</option>`
+                ).join('');
+            }
+        }
+    } catch (e) { console.error("Could not load packs", e); }
+}
+
+function getPackEmoji(pack) {
+    if (pack === 'SOCCER') return '⚽';
+    if (pack === 'MOVIES') return '🎬';
+    return '📦';
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', loadPacks);

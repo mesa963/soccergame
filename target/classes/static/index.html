@@ -21,6 +21,14 @@
                 <div class="input-group">
                     <input type="text" id="playerName" placeholder="Tu Nombre" maxlength="15">
                 </div>
+                <!-- Pack Selection -->
+                <div class="input-group" style="margin-top: 10px;">
+                    <select id="packType" class="glass-input"
+                        style="width: 100%; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
+                        <option value="SOCCER">⚽ Fútbol (Default)</option>
+                        <option value="MOVIES">🎬 Películas</option>
+                    </select>
+                </div>
                 <div class="actions">
                     <button id="btnCreateRoom" class="primary-btn">Crear Sala</button>
                     <div class="divider"><span>O unirse a una</span></div>
@@ -35,7 +43,11 @@
         <!-- Lobby de Espera -->
         <section id="lobby" class="view hidden">
             <div class="glass-card">
-                <h2>Sala: <span id="displayRoomCode" class="highlight">----</span></h2>
+                <h2>Sala: <span id="displayRoomCode" class="highlight">----</span>
+                    <button onclick="copyRoomCode()"
+                        style="background:none; border:none; cursor:pointer; font-size:1.2rem;"
+                        title="Copiar código">📋</button>
+                </h2>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <p>Esperando a los jugadores...</p>
                     <button class="secondary-btn small-btn" onclick="refreshLobby()"
@@ -94,11 +106,11 @@
 
                     <!-- Mi Sección -->
                     <div class="my-section glass-card">
-                        <h3>¿Quién eres tú?</h3>
+                        <h3>¿Cuál es tu categoría?</h3>
                         <div class="secret-card">
                             <span class="lock-icon">🔒</span>
-                            <p>Tú no sabes qué categoría eres.</p>
-                            <p class="hint">Tus amigos te darán pistas.</p>
+                            <p>Tú no sabes qué categoría tienes.</p>
+                            <p class="hint"></p>
                         </div>
                         <div class="notes-area">
                             <label for="myNotes">Tus Notas:</label>

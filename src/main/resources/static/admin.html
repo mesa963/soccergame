@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Soccer Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1,
+        h2 {
+            color: #38bdf8;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            color: #94a3b8;
+        }
+
+        input,
+        select {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            background: #1e293b;
+            color: white;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #38bdf8;
+            color: #0f172a;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: #0f172a;
+        }
+
+        .btn-primary:hover {
+            background: #0ea5e9;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .action-cell {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🛠️ Admin Dashboard</h1>
+
+    <!-- Add Category -->
+    <div class="card">
+        <h2>Añadir Categoría</h2>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="catName" placeholder="Nombre de Categoría / Personaje" style="flex:2;">
+            <!-- Combobox for Pack -->
+            <input type="text" id="catPack" list="packList" placeholder="Escribe o selecciona Pack" style="flex:1;">
+            <datalist id="packList"></datalist>
+
+            <button class="btn-primary" onclick="addCategory()">Añadir</button>
+        </div>
+    </div>
+
+    <!-- Active Rooms -->
+    <div class="card">
+        <h2>Salas Activas <button class="btn-primary" style="font-size:0.8rem; padding: 5px 10px;"
+                onclick="loadRooms()">🔄</button></h2>
+        <table id="roomsTable">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Estado</th>
+                    <th>Pack</th>
+                    <th>Jugadores</th>
+                    <th>Votos</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Categories List -->
+    <div class="card">
+        <h2>Categorías (Total: <span id="totalCats">0</span>) <button class="btn-primary"
+                style="font-size:0.8rem; padding: 5px 10px;" onclick="loadData()">🔄</button></h2>
+        <table id="catsTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Pack</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const API = "/api/admin";
+
+        async function loadData() {
+            await loadPacks();
+            await loadCategories();
+        }
+
+        async function loadPacks() {
+            try {
+                const res = await fetch(API + "/packs");
+                const packs = await res.json();
+                const datalist = document.getElementById('packList');
+                datalist.innerHTML = packs.map(p => `<option value="${p}">`).join('');
+            } catch (e) { console.error("Error loading packs", e); }
+        }
+
+        async function loadRooms() {
+            try {
+                const res = await fetch(API + "/rooms");
+                const rooms = await res.json();
+                const tbody = document.querySelector("#roomsTable tbody");
+                tbody.innerHTML = rooms.map(r => `
+                    <tr>
+                        <td><strong style="color:#38bdf8">${r.roomCode}</strong></td>
+                        <td>${r.status}</td>
+                        <td>${r.selectedPack || '-'}</td>
+                        <td>${r.players ? r.players.length : 0}</td>
+                        <td>Yes: ${r.yesVotes?.length || 0} / No: ${r.noVotes?.length || 0}</td>
+                        <td>
+                            <button class="btn-danger" onclick="deleteRoom('${r.roomCode}')">Eliminar</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error("Error loading rooms", e); }
+        }
+
+        async function loadCategories() {
+            try {
+                const res = await fetch(API + "/categories");
+                const cats = await res.json();
+                document.getElementById('totalCats').innerText = cats.length;
+
+                const tbody = document.querySelector("#catsTable tbody");
+                tbody.innerHTML = cats.map(c => `
+                    <tr>
+                        <td>${c.id}</td>
+                        <td><strong>${c.name}</strong></td>
+                        <td><span style="background:#334155; padding:2px 8px; border-radius:4px; font-size:0.8rem;">${c.packType}</span></td>
+                        <td class="action-cell">
+                            <button class="btn-warning" onclick="editCategory(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.packType}')">✏️</button>
+                            <button class="btn-danger" onclick="deleteCategory(${c.id})">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error("Error loading categories", e); }
+        }
+
+        async function deleteRoom(code) {
+            if (!confirm("¿Seguro que quieres borrar la sala " + code + "?")) return;
+            await fetch(API + "/rooms/" + code, { method: 'DELETE' });
+            loadRooms();
+        }
+
+        async function deleteCategory(id) {
+            if (!confirm("¿Eliminar este ítem?")) return;
+            await fetch(API + "/categories/" + id, { method: 'DELETE' });
+            loadCategories();
+            loadPacks(); // Refresh packs just in case
+        }
+
+        async function editCategory(id, currentName, currentPack) {
+            const newName = prompt("Editar Nombre:", currentName);
+            if (newName === null) return;
+
+            const newPack = prompt("Editar Pack:", currentPack);
+            if (newPack === null) return;
+
+            if (newName && newPack) {
+                await fetch(API + `/categories/${id}?name=${encodeURIComponent(newName)}&packType=${encodeURIComponent(newPack)}`,
+                    { method: 'PUT' });
+                loadData();
+            }
+        }
+
+        async function addCategory() {
+            const name = document.getElementById('catName').value;
+            const pack = document.getElementById('catPack').value;
+            if (!name || !pack) {
+                alert("Por favor llena nombre y pack");
+                return;
+            }
+
+            // Uses standard API
+            await fetch(`/api/rooms/categories?name=${encodeURIComponent(name)}&packType=${encodeURIComponent(pack)}`, { method: 'POST' });
+            document.getElementById('catName').value = "";
+            // Keep pack value for convenience or clear? Let's clear based on typical use
+            document.getElementById('catPack').value = "";
+
+            loadData();
+            alert("Categoría añadida");
+        }
+
+        // Init
+        loadRooms();
+        loadData();
+    </script>
+</body>
+
+</html>

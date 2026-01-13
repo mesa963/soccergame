@@ -1,20 +1,24 @@
 package com.example.soccergame.model;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "ROOMS")
+@Table(name = "SC_ROOMS")
 public class GameRoom {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "room_seq")
+    @SequenceGenerator(name = "room_seq", sequenceName = "ROOM_SEQ", allocationSize = 1)
     private Long id;
 
     @Column(unique = true, nullable = false)
     private String roomCode;
+
+    // "SOCCER", "MOVIES", etc.
+    private String selectedPack;
 
     @Enumerated(EnumType.STRING)
     private RoomStatus status = RoomStatus.WAITING;
@@ -52,6 +56,14 @@ public class GameRoom {
 
     public void setRoomCode(String roomCode) {
         this.roomCode = roomCode;
+    }
+
+    public String getSelectedPack() {
+        return selectedPack;
+    }
+
+    public void setSelectedPack(String selectedPack) {
+        this.selectedPack = selectedPack;
     }
 
     public RoomStatus getStatus() {

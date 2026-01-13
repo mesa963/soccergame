@@ -4,7 +4,7 @@ import com.example.soccergame.model.GamePlayer;
 import com.example.soccergame.model.GameRoom;
 import com.example.soccergame.repository.GameRoomRepository;
 import com.example.soccergame.service.GameService;
-import jakarta.annotation.PostConstruct;
+import javax.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,8 +27,9 @@ public class RoomController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<GameRoom> createRoom(@RequestParam String playerName) {
-        return ResponseEntity.ok(gameService.createRoom(playerName));
+    public ResponseEntity<GameRoom> createRoom(@RequestParam String playerName,
+            @RequestParam(defaultValue = "SOCCER") String packType) {
+        return ResponseEntity.ok(gameService.createRoom(playerName, packType));
     }
 
     @PostMapping("/join")
@@ -69,8 +70,9 @@ public class RoomController {
     }
 
     @PostMapping("/categories")
-    public ResponseEntity<Void> addCategory(@RequestParam String name) {
-        gameService.addCustomCategory(name);
+    public ResponseEntity<Void> addCategory(@RequestParam String name,
+            @RequestParam(defaultValue = "SOCCER") String packType) {
+        gameService.addCustomCategory(name, packType);
         return ResponseEntity.ok().build();
     }
 
