@@ -32,6 +32,7 @@ public class GamePlayer {
     private boolean guessed = false;
     private String pendingGuess;
     private Integer guessOrder;
+    private Integer visualOrder;
 
     public GamePlayer() {
     }
@@ -114,5 +115,13 @@ public class GamePlayer {
 
     public void setGuessOrder(Integer guessOrder) {
         this.guessOrder = guessOrder;
+    }
+
+    public Integer getVisualOrder() {
+        return visualOrder;
+    }
+
+    public void setVisualOrder(Integer visualOrder) {
+        this.visualOrder = visualOrder;
     }
 }

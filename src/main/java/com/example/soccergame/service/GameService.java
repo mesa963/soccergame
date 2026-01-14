@@ -84,10 +84,16 @@ public class GameService {
                 }
 
                 Collections.shuffle(characters);
+                // Shuffle players to determine visual order
+                List<GamePlayer> shuffledPlayers = new ArrayList<>(players);
+                Collections.shuffle(shuffledPlayers);
 
                 for (int i = 0; i < players.size(); i++) {
-                        players.get(i).setAssignedCharacter(characters.get(i));
-                        playerRepository.save(players.get(i));
+                        GamePlayer p = players.get(i);
+                        p.setAssignedCharacter(characters.get(i));
+                        // Find this player in the shuffled list to assign order
+                        p.setVisualOrder(shuffledPlayers.indexOf(p));
+                        playerRepository.save(p);
                 }
 
                 room.setStatus(GameRoom.RoomStatus.IN_GAME);
@@ -263,6 +269,8 @@ public class GameService {
         }
 
         public void seedCharacters() {
+                migrateSoccerToFutbol(); // Run simple migration check
+
                 if (characterRepository.count() == 0) {
                         List<CategoryItem> items = new ArrayList<>();
 
@@ -329,6 +337,18 @@ public class GameService {
                         item.setName(name);
                         item.setPackType(packType);
                         characterRepository.save(item);
+                }
+        }
+
+        @Transactional
+        public void migrateSoccerToFutbol() {
+                List<CategoryItem> items = characterRepository.findByPackType("SOCCER");
+                if (!items.isEmpty()) {
+                        for (CategoryItem item : items) {
+                                item.setPackType("FUTBOL");
+                        }
+                        characterRepository.saveAll(items);
+                        System.out.println("Migrated " + items.size() + " categories from SOCCER to FUTBOL.");
                 }
         }
 

@@ -243,8 +243,13 @@ async function initGame() {
             const players = await res.json();
             allPlayers = players;
 
-            // Randomize turn order for visual circle
-            turnOrder = [...allPlayers].sort(() => Math.random() - 0.5);
+            // Persistent Visual Order
+            turnOrder = [...allPlayers].sort((a, b) => {
+                // Should exist if game started, but fallback to ID just in case
+                const va = a.visualOrder !== undefined && a.visualOrder !== null ? a.visualOrder : a.id;
+                const vb = b.visualOrder !== undefined && b.visualOrder !== null ? b.visualOrder : b.id;
+                return va - vb;
+            });
 
             const updatedMe = players.find(p => p.id === currentPlayer.id);
             if (updatedMe) {
