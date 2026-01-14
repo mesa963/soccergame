@@ -30,7 +30,7 @@ public class GameService {
                 GameRoom room = new GameRoom();
                 room.setRoomCode(roomCode);
                 room.setStatus(GameRoom.RoomStatus.WAITING);
-                room.setSelectedPack(packType != null ? packType : "SOCCER"); // Default to SOCCER
+                room.setSelectedPack(packType != null ? packType : "FUTBOL"); // Default to FUTBOL
                 room = roomRepository.save(room);
 
                 GamePlayer player = new GamePlayer();
@@ -52,6 +52,13 @@ public class GameService {
 
                 if (room.getStatus() != GameRoom.RoomStatus.WAITING) {
                         throw new RuntimeException("Game already started");
+                }
+
+                // Check for duplicate name
+                boolean nameExists = room.getPlayers().stream()
+                                .anyMatch(p -> p.getName().equalsIgnoreCase(playerName));
+                if (nameExists) {
+                        throw new RuntimeException("Nombre ya en uso en esta sala");
                 }
 
                 GamePlayer player = new GamePlayer();
@@ -89,10 +96,11 @@ public class GameService {
         }
 
         @Transactional
-        public void updateNotes(Long playerId, String notes) {
+        public void updateNotes(Long playerId, String validNotes, String invalidNotes) {
                 GamePlayer player = playerRepository.findById(playerId)
                                 .orElseThrow(() -> new RuntimeException("Player not found"));
-                player.setNotes(notes);
+                player.setNotes(validNotes);
+                player.setInvalidNotes(invalidNotes);
                 playerRepository.save(player);
         }
 
@@ -222,10 +230,26 @@ public class GameService {
 
                 // Reshuffle from the same pack
                 List<CategoryItem> characters = characterRepository.findByPackType(target.getRoom().getSelectedPack());
-                Collections.shuffle(characters);
+
+                // Exclude currently assigned characters in the room
+                List<Long> assignedIds = target.getRoom().getPlayers().stream()
+                                .filter(p -> p.getAssignedCharacter() != null)
+                                .map(p -> p.getAssignedCharacter().getId())
+                                .toList();
+
+                List<CategoryItem> available = characters.stream()
+                                .filter(c -> !assignedIds.contains(c.getId()))
+                                .toList();
+
+                if (available.isEmpty()) {
+                        // Fallback: if we truly ran out (rare), just pick random from all
+                        available = characters;
+                }
+
+                Collections.shuffle(available);
 
                 // Assign a new random character (category)
-                target.setAssignedCharacter(characters.get(0));
+                target.setAssignedCharacter(available.get(0));
                 playerRepository.save(target);
 
                 messagingTemplate.convertAndSend("/topic/room/" + target.getRoom().getRoomCode(),
@@ -242,20 +266,20 @@ public class GameService {
                 if (characterRepository.count() == 0) {
                         List<CategoryItem> items = new ArrayList<>();
 
-                        // SOCCER PACK
-                        items.add(new CategoryItem(null, "Ganadores de Copa América y Mundial", "SOCCER", "", ""));
-                        items.add(new CategoryItem(null, "Jugadores con 3 Champions en clubes distintos", "SOCCER", "",
+                        // FUTBOL PACK
+                        items.add(new CategoryItem(null, "Ganadores de Copa América y Mundial", "FUTBOL", "", ""));
+                        items.add(new CategoryItem(null, "Jugadores con 3 Champions en clubes distintos", "FUTBOL", "",
                                         ""));
-                        items.add(new CategoryItem(null, "Goleadores en 4 ligas top de Europa", "SOCCER", "", ""));
-                        items.add(new CategoryItem(null, "Porteros con un gol oficial de campo", "SOCCER", "", ""));
-                        items.add(new CategoryItem(null, "Jugadores de Real Madrid y Barcelona", "SOCCER", "", ""));
-                        items.add(new CategoryItem(null, "Ganadores de Balón de Oro africanos", "SOCCER", "", ""));
-                        items.add(new CategoryItem(null, "Jugadores con +100 goles en selección", "SOCCER", "", ""));
-                        items.add(new CategoryItem(null, "Campeones como jugador y entrenador", "SOCCER", "", ""));
-                        items.add(new CategoryItem(null, "Ganadores de Libertadores y Champions", "SOCCER", "", ""));
-                        items.add(new CategoryItem(null, "Jugadores con dorsal 10 en Brasil", "SOCCER", "", ""));
-                        items.add(new CategoryItem(null, "Fichajes de +100 millones de euros", "SOCCER", "", ""));
-                        items.add(new CategoryItem(null, "Jugadores sin tarjeta roja en su carrera", "SOCCER", "", ""));
+                        items.add(new CategoryItem(null, "Goleadores en 4 ligas top de Europa", "FUTBOL", "", ""));
+                        items.add(new CategoryItem(null, "Porteros con un gol oficial de campo", "FUTBOL", "", ""));
+                        items.add(new CategoryItem(null, "Jugadores de Real Madrid y Barcelona", "FUTBOL", "", ""));
+                        items.add(new CategoryItem(null, "Ganadores de Balón de Oro africanos", "FUTBOL", "", ""));
+                        items.add(new CategoryItem(null, "Jugadores con +100 goles en selección", "FUTBOL", "", ""));
+                        items.add(new CategoryItem(null, "Campeones como jugador y entrenador", "FUTBOL", "", ""));
+                        items.add(new CategoryItem(null, "Ganadores de Libertadores y Champions", "FUTBOL", "", ""));
+                        items.add(new CategoryItem(null, "Jugadores con dorsal 10 en Brasil", "FUTBOL", "", ""));
+                        items.add(new CategoryItem(null, "Fichajes de +100 millones de euros", "FUTBOL", "", ""));
+                        items.add(new CategoryItem(null, "Jugadores sin tarjeta roja en su carrera", "FUTBOL", "", ""));
 
                         // MOVIES PACK
                         items.add(new CategoryItem(null, "Ganadores del Oscar a Mejor Director", "MOVIES", "", ""));

@@ -25,7 +25,7 @@
                 <div class="input-group" style="margin-top: 10px;">
                     <select id="packType" class="glass-input"
                         style="width: 100%; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
-                        <option value="SOCCER">⚽ Fútbol (Default)</option>
+                        <option value="FUTBOL">⚽ Fútbol (Default)</option>
                         <option value="MOVIES">🎬 Películas</option>
                     </select>
                 </div>
@@ -113,8 +113,12 @@
                             <p class="hint"></p>
                         </div>
                         <div class="notes-area">
-                            <label for="myNotes">Tus Notas:</label>
-                            <textarea id="myNotes" placeholder="Escribe pistas aquí..."></textarea>
+                            <label for="myNotes">Posibles (SÍ):</label>
+                            <textarea id="myNotes" placeholder="Candidatos probables..."></textarea>
+                            <label for="myInvalidNotes" style="margin-top: 10px; display:block;">Descartados
+                                (NO):</label>
+                            <textarea id="myInvalidNotes" placeholder="Ya descartados..."
+                                style="background: rgba(255,0,0,0.1);"></textarea>
                         </div>
                         <div class="guess-actions">
                             <button id="btnGuess" class="guess-btn">¡Adivinar!</button>

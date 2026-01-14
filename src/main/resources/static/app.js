@@ -262,6 +262,12 @@ async function initGame() {
             `;
             document.getElementById('btnGuess').disabled = false;
 
+            // Load notes
+            if (currentPlayer) {
+                document.getElementById('myNotes').value = currentPlayer.notes || "";
+                document.getElementById('myInvalidNotes').value = currentPlayer.invalidNotes || "";
+            }
+
             renderOtherPlayers();
             renderTurnCircle();
             renderPodium();
@@ -436,14 +442,22 @@ async function submitVote(correct) {
 }
 
 // Note updates
-document.getElementById('myNotes').addEventListener('input', debounce(async (e) => {
+function sendNotes() {
     if (!currentPlayer) return;
-    await fetch(`/api/rooms/players/${currentPlayer.id}/notes`, {
+    const valid = document.getElementById('myNotes').value;
+    const invalid = document.getElementById('myInvalidNotes').value;
+
+    fetch(`/api/rooms/players/${currentPlayer.id}/notes`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'text/plain' },
-        body: e.target.value
-    });
-}, 1000));
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valid: valid, invalid: invalid })
+    }).catch(e => console.error(e));
+}
+
+const debouncedSendNotes = debounce(sendNotes, 1000);
+
+document.getElementById('myNotes').addEventListener('input', debouncedSendNotes);
+document.getElementById('myInvalidNotes').addEventListener('input', debouncedSendNotes);
 
 document.getElementById('btnCreateRoom').onclick = () => {
     const name = document.getElementById('playerName').value;
@@ -524,7 +538,7 @@ async function loadPacks() {
 }
 
 function getPackEmoji(pack) {
-    if (pack === 'SOCCER') return '⚽';
+    if (pack === 'FUTBOL' || pack === 'SOCCER') return '⚽';
     if (pack === 'MOVIES') return '🎬';
     return '📦';
 }

@@ -136,6 +136,8 @@
     <div class="card">
         <h2>Categorías (Total: <span id="totalCats">0</span>) <button class="btn-primary"
                 style="font-size:0.8rem; padding: 5px 10px;" onclick="loadData()">🔄</button></h2>
+        <input type="text" id="searchCategories" placeholder="🔍 Buscar categoría..." onkeyup="filterCategories()"
+            style="width: 100%; margin-bottom: 10px; background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; color: white;">
         <table id="catsTable">
             <thead>
                 <tr>
@@ -250,6 +252,27 @@
 
             loadData();
             alert("Categoría añadida");
+        }
+
+        function filterCategories() {
+            const input = document.getElementById('searchCategories');
+            const filter = input.value.toUpperCase();
+            const table = document.getElementById('catsTable');
+            const tr = table.getElementsByTagName('tr');
+
+            for (let i = 1; i < tr.length; i++) {
+                const tdName = tr[i].getElementsByTagName('td')[1]; // Name column
+                const tdPack = tr[i].getElementsByTagName('td')[2]; // Pack column
+                if (tdName || tdPack) {
+                    const txtValueName = tdName.textContent || tdName.innerText;
+                    const txtValuePack = tdPack.textContent || tdPack.innerText;
+                    if (txtValueName.toUpperCase().indexOf(filter) > -1 || txtValuePack.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+            }
         }
 
         // Init

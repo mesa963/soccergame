@@ -25,6 +25,9 @@ public class GamePlayer {
     @Column(length = 2000)
     private String notes;
 
+    @Column(length = 2000)
+    private String invalidNotes;
+
     private boolean host = false;
     private boolean guessed = false;
     private String pendingGuess;
@@ -71,6 +74,14 @@ public class GamePlayer {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getInvalidNotes() {
+        return invalidNotes;
+    }
+
+    public void setInvalidNotes(String invalidNotes) {
+        this.invalidNotes = invalidNotes;
     }
 
     public boolean isHost() {

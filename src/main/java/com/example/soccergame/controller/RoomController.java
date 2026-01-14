@@ -28,7 +28,7 @@ public class RoomController {
 
     @PostMapping("/create")
     public ResponseEntity<GameRoom> createRoom(@RequestParam String playerName,
-            @RequestParam(defaultValue = "SOCCER") String packType) {
+            @RequestParam(defaultValue = "FUTBOL") String packType) {
         return ResponseEntity.ok(gameService.createRoom(playerName, packType));
     }
 
@@ -51,8 +51,9 @@ public class RoomController {
     }
 
     @PutMapping("/players/{playerId}/notes")
-    public ResponseEntity<Void> updateNotes(@PathVariable Long playerId, @RequestBody String notes) {
-        gameService.updateNotes(playerId, notes);
+    public ResponseEntity<Void> updateNotes(@PathVariable Long playerId,
+            @RequestBody java.util.Map<String, String> notes) {
+        gameService.updateNotes(playerId, notes.get("valid"), notes.get("invalid"));
         return ResponseEntity.ok().build();
     }
 
@@ -71,7 +72,7 @@ public class RoomController {
 
     @PostMapping("/categories")
     public ResponseEntity<Void> addCategory(@RequestParam String name,
-            @RequestParam(defaultValue = "SOCCER") String packType) {
+            @RequestParam(defaultValue = "FUTBOL") String packType) {
         gameService.addCustomCategory(name, packType);
         return ResponseEntity.ok().build();
     }
