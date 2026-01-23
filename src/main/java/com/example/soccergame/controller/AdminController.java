@@ -50,4 +50,22 @@ public class AdminController {
     public ResponseEntity<List<String>> getAllPacks() {
         return ResponseEntity.ok(gameService.getAllPacks());
     }
+
+    @GetMapping("/impostor-words")
+    public ResponseEntity<List<com.example.soccergame.model.ImpostorWord>> getAllImpostorWords() {
+        return ResponseEntity.ok(gameService.getAllImpostorWords());
+    }
+
+    @PostMapping("/impostor-words")
+    public ResponseEntity<Void> addImpostorWord(@RequestParam String category, @RequestParam String word,
+            @RequestParam String hint) {
+        gameService.addImpostorWord(category, word, hint);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/impostor-words/{id}")
+    public ResponseEntity<Void> deleteImpostorWord(@PathVariable Long id) {
+        gameService.deleteImpostorWord(id);
+        return ResponseEntity.ok().build();
+    }
 }

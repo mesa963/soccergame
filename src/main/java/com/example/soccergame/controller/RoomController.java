@@ -28,8 +28,11 @@ public class RoomController {
 
     @PostMapping("/create")
     public ResponseEntity<GameRoom> createRoom(@RequestParam String playerName,
-            @RequestParam(defaultValue = "FUTBOL") String packType) {
-        return ResponseEntity.ok(gameService.createRoom(playerName, packType));
+            @RequestParam(defaultValue = "FUTBOL") String packType,
+            @RequestParam(defaultValue = "GUESS_WHO") String gameType,
+            @RequestParam(defaultValue = "1") int impostorCount,
+            @RequestParam(defaultValue = "false") boolean hints) {
+        return ResponseEntity.ok(gameService.createRoom(playerName, packType, gameType, impostorCount, hints));
     }
 
     @PostMapping("/join")
@@ -41,6 +44,13 @@ public class RoomController {
     public ResponseEntity<List<GamePlayer>> getPlayers(@PathVariable String roomCode) {
         return roomRepository.findByRoomCode(roomCode)
                 .map(room -> ResponseEntity.ok(room.getPlayers()))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{roomCode}")
+    public ResponseEntity<GameRoom> getRoom(@PathVariable String roomCode) {
+        return roomRepository.findByRoomCode(roomCode)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -94,5 +104,10 @@ public class RoomController {
             @RequestParam boolean yes) {
         gameService.processVote(targetId, voterId, yes, "CHANGE");
         return ResponseEntity.ok().build();
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<String> handleRuntimeException(RuntimeException e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
     }
 }

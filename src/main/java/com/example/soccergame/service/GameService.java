@@ -24,13 +24,27 @@ public class GameService {
         @Autowired
         private SimpMessagingTemplate messagingTemplate;
 
+        @Autowired
+        private ImpostorWordRepository impostorWordRepository;
+
         @Transactional
-        public GameRoom createRoom(String playerName, String packType) {
+        public GameRoom createRoom(String playerName, String packType, String gameTypeStr, int impostorCount,
+                        boolean hints) {
                 String roomCode = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
                 GameRoom room = new GameRoom();
                 room.setRoomCode(roomCode);
                 room.setStatus(GameRoom.RoomStatus.WAITING);
-                room.setSelectedPack(packType != null ? packType : "FUTBOL"); // Default to FUTBOL
+
+                GameRoom.GameType type = GameRoom.GameType.GUESS_WHO;
+                if ("IMPOSTOR".equalsIgnoreCase(gameTypeStr)) {
+                        type = GameRoom.GameType.IMPOSTOR;
+                        room.setImpostorCount(impostorCount > 0 ? impostorCount : 1);
+                        room.setImpostorHints(hints);
+                } else {
+                        room.setSelectedPack(packType != null ? packType : "FUTBOL");
+                }
+                room.setGameType(type);
+
                 room = roomRepository.save(room);
 
                 GamePlayer player = new GamePlayer();
@@ -75,12 +89,21 @@ public class GameService {
                 GameRoom room = roomRepository.findByRoomCode(roomCode)
                                 .orElseThrow(() -> new RuntimeException("Room not found"));
 
+                if (room.getGameType() == GameRoom.GameType.IMPOSTOR) {
+                        startImpostorGame(room);
+                } else {
+                        startGuessWhoGame(room);
+                }
+        }
+
+        private void startGuessWhoGame(GameRoom room) {
                 List<GamePlayer> players = room.getPlayers();
                 // Filter by the room's selected pack
                 List<CategoryItem> characters = characterRepository.findByPackType(room.getSelectedPack());
 
                 if (characters.size() < players.size()) {
-                        throw new RuntimeException("Not enough characters in DB");
+                        throw new RuntimeException("Not enough characters in DB for pack '" + room.getSelectedPack() +
+                                        "'. Found " + characters.size() + ", needed " + players.size());
                 }
 
                 Collections.shuffle(characters);
@@ -98,7 +121,43 @@ public class GameService {
 
                 room.setStatus(GameRoom.RoomStatus.IN_GAME);
                 roomRepository.save(room);
-                messagingTemplate.convertAndSend("/topic/room/" + roomCode, "GAME_STARTED");
+                messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(), "GAME_STARTED");
+        }
+
+        private void startImpostorGame(GameRoom room) {
+                List<ImpostorWord> words = impostorWordRepository.findAll();
+                if (words.isEmpty()) {
+                        throw new RuntimeException("No words configured for Impostor Game");
+                }
+
+                // Pick random word
+                ImpostorWord selected = words.get(new Random().nextInt(words.size()));
+                room.setCurrentCategory(selected.getCategory());
+                room.setCurrentWord(selected.getWord());
+
+                // Assign Impostors
+                List<GamePlayer> players = room.getPlayers();
+                Collections.shuffle(players);
+
+                int impostorCount = Math.min(room.getImpostorCount(), players.size() - 1);
+                if (impostorCount < 1)
+                        impostorCount = 1;
+
+                for (int i = 0; i < players.size(); i++) {
+                        GamePlayer p = players.get(i);
+                        p.setImpostor(i < impostorCount);
+                        if (p.isImpostor() && room.isImpostorHints()) {
+                                p.setPendingGuess(selected.getHint()); // Hack: using pendingGuess to store hint
+                                                                       // temporarily for frontend
+                        } else {
+                                p.setPendingGuess(null);
+                        }
+                        playerRepository.save(p);
+                }
+
+                room.setStatus(GameRoom.RoomStatus.IN_GAME);
+                roomRepository.save(room);
+                messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(), "GAME_STARTED");
         }
 
         @Transactional
@@ -156,11 +215,17 @@ public class GameService {
                         if (type.equals("GUESS")) {
                                 executeValidateGuess(targetId, approved);
                         } else {
-                                if (approved)
-                                        executeChange(targetId);
-                                else
+                                if (approved) {
+                                        try {
+                                                executeChange(targetId);
+                                        } catch (RuntimeException e) {
+                                                messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(),
+                                                                "CHANGE_REJECTED:" + target.getName());
+                                        }
+                                } else {
                                         messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(),
                                                         "CHANGE_REJECTED:" + target.getName());
+                                }
                         }
                 }
         }
@@ -198,7 +263,8 @@ public class GameService {
                 List<CategoryItem> characters = characterRepository.findByPackType(room.getSelectedPack());
 
                 if (characters.size() < players.size()) {
-                        throw new RuntimeException("Not enough characters in DB");
+                        throw new RuntimeException("Not enough characters in DB for pack '" + room.getSelectedPack() +
+                                        "'. Found " + characters.size() + ", needed " + players.size());
                 }
 
                 Collections.shuffle(characters);
@@ -264,12 +330,14 @@ public class GameService {
 
         @Transactional
         public void addCustomCategory(String categoryName, String packType) {
-                CategoryItem category = new CategoryItem(null, categoryName, packType, "", "");
+                String normalizedPack = packType != null ? packType.toUpperCase().trim() : "FUTBOL";
+                CategoryItem category = new CategoryItem(null, categoryName, normalizedPack, "", "");
                 characterRepository.save(category);
         }
 
         public void seedCharacters() {
                 migrateSoccerToFutbol(); // Run simple migration check
+                seedImpostorWords();
 
                 if (characterRepository.count() == 0) {
                         List<CategoryItem> items = new ArrayList<>();
@@ -305,6 +373,20 @@ public class GameService {
                         characterRepository.saveAll(items);
                 }
         }
+
+        public void seedImpostorWords() {
+                if (impostorWordRepository.count() == 0) {
+                        List<ImpostorWord> list = new ArrayList<>();
+                        list.add(new ImpostorWord(null, "Animales", "León", "El rey de la selva"));
+                        list.add(new ImpostorWord(null, "Animales", "Elefante", "Tiene mucha memoria y trompa"));
+                        list.add(new ImpostorWord(null, "Comida", "Pizza", "De origen italiano, redonda"));
+                        list.add(new ImpostorWord(null, "Países", "México", "Tacos, mariachis y picante"));
+                        list.add(new ImpostorWord(null, "Deportes", "Fútbol", "11 contra 11, gol"));
+                        list.add(new ImpostorWord(null, "Profesiones", "Doctor", "Cura a los enfermos"));
+                        list.add(new ImpostorWord(null, "Transporte", "Avión", "Vuela por los aires"));
+                        impostorWordRepository.saveAll(list);
+                }
+        }
         // ADMIN METHODS
 
         public List<CategoryItem> getAllCategories() {
@@ -335,7 +417,7 @@ public class GameService {
                 CategoryItem item = characterRepository.findById(id).orElse(null);
                 if (item != null) {
                         item.setName(name);
-                        item.setPackType(packType);
+                        item.setPackType(packType != null ? packType.toUpperCase().trim() : "FUTBOL");
                         characterRepository.save(item);
                 }
         }
@@ -361,5 +443,20 @@ public class GameService {
                         }
                 }
                 return new ArrayList<>(packs);
+        }
+
+        public List<ImpostorWord> getAllImpostorWords() {
+                return impostorWordRepository.findAll();
+        }
+
+        @Transactional
+        public void addImpostorWord(String category, String word, String hint) {
+                ImpostorWord w = new ImpostorWord(null, category, word, hint);
+                impostorWordRepository.save(w);
+        }
+
+        @Transactional
+        public void deleteImpostorWord(Long id) {
+                impostorWordRepository.deleteById(id);
         }
 }

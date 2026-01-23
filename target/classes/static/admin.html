@@ -102,7 +102,7 @@
 
     <!-- Add Category -->
     <div class="card">
-        <h2>Añadir Categoría</h2>
+        <h2>Añadir Categoría (Adivina Quién)</h2>
         <div style="display: flex; gap: 10px;">
             <input type="text" id="catName" placeholder="Nombre de Categoría / Personaje" style="flex:2;">
             <!-- Combobox for Pack -->
@@ -110,6 +110,17 @@
             <datalist id="packList"></datalist>
 
             <button class="btn-primary" onclick="addCategory()">Añadir</button>
+        </div>
+    </div>
+
+    <!-- Add Impostor Word -->
+    <div class="card" style="border-color: #f59e0b;">
+        <h2 style="color: #f59e0b;">Añadir Palabra (Impostor)</h2>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="impCategory" placeholder="Categoría (ej: Animales)" style="flex:1;">
+            <input type="text" id="impWord" placeholder="Palabra (ej: León)" style="flex:1;">
+            <input type="text" id="impHint" placeholder="Pista (ej: Rey de la selva)" style="flex:2;">
+            <button class="btn-warning" onclick="addImpostorWord()">Añadir</button>
         </div>
     </div>
 
@@ -134,7 +145,7 @@
 
     <!-- Categories List -->
     <div class="card">
-        <h2>Categorías (Total: <span id="totalCats">0</span>) <button class="btn-primary"
+        <h2>Categorías (Adivina Quién) - Total: <span id="totalCats">0</span> <button class="btn-primary"
                 style="font-size:0.8rem; padding: 5px 10px;" onclick="loadData()">🔄</button></h2>
         <input type="text" id="searchCategories" placeholder="🔍 Buscar categoría..." onkeyup="filterCategories()"
             style="width: 100%; margin-bottom: 10px; background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; color: white;">
@@ -151,12 +162,30 @@
         </table>
     </div>
 
+    <!-- Impostor Words List -->
+    <div class="card" style="border-color: #f59e0b;">
+        <h2 style="color: #f59e0b;">Palabras Impostor (Total: <span id="totalImp">0</span>)</h2>
+        <table id="impTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Categoría</th>
+                    <th>Palabra</th>
+                    <th>Pista</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
     <script>
         const API = "/api/admin";
 
         async function loadData() {
             await loadPacks();
             await loadCategories();
+            await loadImpostorWords();
         }
 
         async function loadPacks() {
@@ -209,6 +238,27 @@
             } catch (e) { console.error("Error loading categories", e); }
         }
 
+        async function loadImpostorWords() {
+            try {
+                const res = await fetch(API + "/impostor-words");
+                const list = await res.json();
+                document.getElementById('totalImp').innerText = list.length;
+
+                const tbody = document.querySelector("#impTable tbody");
+                tbody.innerHTML = list.map(item => `
+                    <tr>
+                        <td>${item.id}</td>
+                        <td>${item.category}</td>
+                        <td><strong>${item.word}</strong></td>
+                        <td><i>${item.hint}</i></td>
+                        <td>
+                            <button class="btn-danger" onclick="deleteImpostorWord(${item.id})">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error("Error loading impostor words", e); }
+        }
+
         async function deleteRoom(code) {
             if (!confirm("¿Seguro que quieres borrar la sala " + code + "?")) return;
             await fetch(API + "/rooms/" + code, { method: 'DELETE' });
@@ -252,6 +302,32 @@
 
             loadData();
             alert("Categoría añadida");
+        }
+
+        async function addImpostorWord() {
+            const cat = document.getElementById('impCategory').value;
+            const word = document.getElementById('impWord').value;
+            const hint = document.getElementById('impHint').value;
+
+            if (!cat || !word || !hint) {
+                alert("Completa todos los campos");
+                return;
+            }
+
+            await fetch(API + `/impostor-words?category=${encodeURIComponent(cat)}&word=${encodeURIComponent(word)}&hint=${encodeURIComponent(hint)}`, { method: 'POST' });
+
+            document.getElementById('impCategory').value = "";
+            document.getElementById('impWord').value = "";
+            document.getElementById('impHint').value = "";
+
+            loadImpostorWords();
+            alert("Palabra añadida");
+        }
+
+        async function deleteImpostorWord(id) {
+            if (!confirm("¿Eliminar palabra?")) return;
+            await fetch(API + "/impostor-words/" + id, { method: 'DELETE' });
+            loadImpostorWords();
         }
 
         function filterCategories() {

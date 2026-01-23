@@ -30,8 +30,9 @@ public class GamePlayer {
 
     private boolean host = false;
     private boolean guessed = false;
+    private boolean isImpostor;
     private String pendingGuess;
-    private Integer guessOrder;
+    private Integer guessOrder; // 1st, 2nd, etc.
     private Integer visualOrder;
 
     public GamePlayer() {
@@ -99,6 +100,14 @@ public class GamePlayer {
 
     public void setGuessed(boolean guessed) {
         this.guessed = guessed;
+    }
+
+    public boolean isImpostor() {
+        return isImpostor;
+    }
+
+    public void setImpostor(boolean impostor) {
+        this.isImpostor = impostor;
     }
 
     public String getPendingGuess() {

@@ -17,8 +17,10 @@ public class GameRoom {
     @Column(unique = true, nullable = false)
     private String roomCode;
 
-    // "SOCCER", "MOVIES", etc.
-    private String selectedPack;
+    private String selectedPack; // For GUESS_WHO
+
+    @Enumerated(EnumType.STRING)
+    private GameType gameType = GameType.GUESS_WHO;
 
     @Enumerated(EnumType.STRING)
     private RoomStatus status = RoomStatus.WAITING;
@@ -35,8 +37,18 @@ public class GameRoom {
     @ElementCollection
     private Set<Long> noVotes = new HashSet<>();
 
+    // Impostor Game Fields
+    private int impostorCount = 1;
+    private boolean impostorHints = false;
+    private String currentCategory; // For the round
+    private String currentWord; // For the round
+
     public enum RoomStatus {
         WAITING, IN_GAME, FINISHED
+    }
+
+    public enum GameType {
+        GUESS_WHO, IMPOSTOR
     }
 
     public GameRoom() {
@@ -112,5 +124,45 @@ public class GameRoom {
 
     public void setNoVotes(Set<Long> noVotes) {
         this.noVotes = noVotes;
+    }
+
+    public GameType getGameType() {
+        return gameType;
+    }
+
+    public void setGameType(GameType gameType) {
+        this.gameType = gameType;
+    }
+
+    public int getImpostorCount() {
+        return impostorCount;
+    }
+
+    public void setImpostorCount(int impostorCount) {
+        this.impostorCount = impostorCount;
+    }
+
+    public boolean isImpostorHints() {
+        return impostorHints;
+    }
+
+    public void setImpostorHints(boolean impostorHints) {
+        this.impostorHints = impostorHints;
+    }
+
+    public String getCurrentCategory() {
+        return currentCategory;
+    }
+
+    public void setCurrentCategory(String currentCategory) {
+        this.currentCategory = currentCategory;
+    }
+
+    public String getCurrentWord() {
+        return currentWord;
+    }
+
+    public void setCurrentWord(String currentWord) {
+        this.currentWord = currentWord;
     }
 }

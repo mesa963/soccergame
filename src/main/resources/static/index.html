@@ -21,13 +21,42 @@
                 <div class="input-group">
                     <input type="text" id="playerName" placeholder="Tu Nombre" maxlength="15">
                 </div>
-                <!-- Pack Selection -->
+
                 <div class="input-group" style="margin-top: 10px;">
+                    <label
+                        style="color:white; display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Modo
+                        de Juego</label>
+                    <select id="gameModeSelection" class="glass-input" onchange="toggleGameConfig()"
+                        style="width: 100%; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
+                        <option value="GUESS_WHO">🕵️‍♂️ Adivina Quién (Categorías)</option>
+                        <option value="IMPOSTOR">🎭 El Impostor</option>
+                    </select>
+                </div>
+
+                <!-- Pack Selection (Guess Who) -->
+                <div id="guessWhoConfig" class="input-group" style="margin-top: 10px;">
+                    <label
+                        style="color:white; display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Pack
+                        de Categorías</label>
                     <select id="packType" class="glass-input"
                         style="width: 100%; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
-                        <option value="FUTBOL">⚽ Fútbol (Default)</option>
+                        <option value="FUTBOL">⚽ Fútbol</option>
                         <option value="MOVIES">🎬 Películas</option>
                     </select>
+                </div>
+
+                <!-- Impostor Config -->
+                <div id="impostorConfig" class="input-group hidden" style="margin-top: 10px;">
+                    <label
+                        style="color:white; display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Configuración
+                        Impostor</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" id="impostorCount" placeholder="# Impostores" value="1" min="1" max="3"
+                            style="flex:1; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
+                        <div style="flex:1; display:flex; align-items:center; color:white; font-size:0.9rem;">
+                            <input type="checkbox" id="impostorHints" style="margin-right:5px;"> Pistas
+                        </div>
+                    </div>
                 </div>
                 <div class="actions">
                     <button id="btnCreateRoom" class="primary-btn">Crear Sala</button>

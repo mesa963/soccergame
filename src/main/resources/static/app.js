@@ -24,8 +24,19 @@ function showView(viewName) {
 // REST API calls
 async function createRoom(playerName) {
     try {
-        const packType = document.getElementById('packType').value || "SOCCER";
-        const res = await fetch(`/api/rooms/create?playerName=${encodeURIComponent(playerName)}&packType=${packType}`, { method: 'POST' });
+        const gameType = document.getElementById('gameModeSelection').value;
+        let url = `/api/rooms/create?playerName=${encodeURIComponent(playerName)}&gameType=${gameType}`;
+
+        if (gameType === 'IMPOSTOR') {
+            const count = document.getElementById('impostorCount').value;
+            const hints = document.getElementById('impostorHints').checked;
+            url += `&impostorCount=${count}&hints=${hints}`;
+        } else {
+            const packType = document.getElementById('packType').value || "FUTBOL";
+            url += `&packType=${packType}`;
+        }
+
+        const res = await fetch(url, { method: 'POST' });
         const room = await res.json();
         currentRoom = room;
         currentPlayer = room.players[0]; // The host
@@ -260,11 +271,50 @@ async function initGame() {
             }
 
             document.getElementById('gameRoomCode').innerText = currentRoom.roomCode;
-            document.querySelector('.secret-card').innerHTML = `
-                <span class="lock-icon">🔒</span>
-                <p>Tú no sabes qué categoría eres.</p>
-                <p class="hint">Tus amigos te darán pistas.</p>
-            `;
+
+            // Render Secret Card based on Game Type
+            const secretCard = document.querySelector('.secret-card');
+
+            // Refresh detailed room info to get Type and Words
+            const roomRes = await fetch(`/api/rooms/${currentRoom.roomCode}`);
+            if (roomRes.ok) {
+                currentRoom = await roomRes.json(); // refresh full room object
+            }
+
+            if (currentRoom.gameType === 'IMPOSTOR') {
+                // Impostor UI
+                const amIImpostor = currentPlayer.isImpostor;
+                if (amIImpostor) {
+                    secretCard.innerHTML = `
+                        <span class="lock-icon" style="font-size:3rem;">🤫</span>
+                        <p style="color: #ef4444; font-weight:bold; font-size:1.2rem;">¡ERES EL IMPOSTOR!</p>
+                        <p>Engaña a los demás.</p>
+                        ${currentPlayer.pendingGuess ? `<p class="hint" style="color:#fbbf24; margin-top:10px;">PISTA: ${currentPlayer.pendingGuess}</p>` : ''}
+                     `;
+                    // Disable Guess Button for Impostor? Or leave it to fake/guess category?
+                    // Usually Impostor tries to guess the word to win or just survives.
+                    // Let's assume Impostor doesn't "Adivinar Categoría" via the standard button for now, or maybe they do? 
+                    // Users requirement: "se le mostrara la pista si seleccionan".
+                    // Let's keep button enabled.
+                } else {
+                    // Regular Player
+                    secretCard.innerHTML = `
+                        <span class="lock-icon" style="font-size:3rem;">📖</span>
+                        <p style="color: #38bdf8; font-weight:bold;">CATEGORÍA: ${currentRoom.currentCategory}</p>
+                        <p style="font-size:1.5rem; margin-top:10px;">PALABRA: ${currentRoom.currentWord}</p>
+                     `;
+                }
+                document.getElementById('myStatus').innerText = amIImpostor ? "IMPOSTOR" : "Jugador";
+                if (amIImpostor) document.getElementById('myStatus').classList.add('impostor-badge'); // Style this
+            } else {
+                // Classic Guess Who
+                secretCard.innerHTML = `
+                    <span class="lock-icon">🔒</span>
+                    <p>Tú no sabes qué categoría eres.</p>
+                    <p class="hint">Tus amigos te darán pistas.</p>
+                `;
+                document.getElementById('myStatus').innerText = "Adivinando...";
+            }
             document.getElementById('btnGuess').disabled = false;
 
             // Load notes
@@ -433,16 +483,29 @@ document.getElementById('btnResetGame').onclick = resetGame;
 async function submitVote(correct) {
     if (!pendingVoteFor) return;
     try {
+        let res;
         if (votingType === 'guess') {
-            await fetch(`/api/rooms/players/${pendingVoteFor}/validate?voterId=${currentPlayer.id}&correct=${correct}`, { method: 'POST' });
+            res = await fetch(`/api/rooms/players/${pendingVoteFor}/validate?voterId=${currentPlayer.id}&correct=${correct}`, { method: 'POST' });
         } else if (votingType === 'change') {
-            await fetch(`/api/rooms/players/${pendingVoteFor}/execute-change?voterId=${currentPlayer.id}&yes=${correct}`, { method: 'POST' });
+            res = await fetch(`/api/rooms/players/${pendingVoteFor}/execute-change?voterId=${currentPlayer.id}&yes=${correct}`, { method: 'POST' });
         }
+
+        if (res && !res.ok) {
+            // If the server rejected the vote (e.g. error), force close UI
+            console.error("Vote failed, closing UI");
+            hideVotingUI();
+            const msg = await res.text();
+            showNotification("Error: " + msg);
+            return;
+        }
+
         // No ocultamos el UI inmediatamente aquí, esperamos el progreso o la resolución final
         document.getElementById('votingArea').querySelectorAll('button').forEach(b => b.disabled = true);
         showNotification("Voto enviado. Esperando a los demás...");
     } catch (err) {
         console.error("Error voting:", err);
+        hideVotingUI();
+        showNotification("Error de conexión");
     }
 }
 
@@ -540,6 +603,20 @@ async function loadPacks() {
             }
         }
     } catch (e) { console.error("Could not load packs", e); }
+}
+
+function toggleGameConfig() {
+    const mode = document.getElementById('gameModeSelection').value;
+    const guessWho = document.getElementById('guessWhoConfig');
+    const impostor = document.getElementById('impostorConfig');
+
+    if (mode === 'IMPOSTOR') {
+        guessWho.classList.add('hidden');
+        impostor.classList.remove('hidden');
+    } else {
+        guessWho.classList.remove('hidden');
+        impostor.classList.add('hidden');
+    }
 }
 
 function getPackEmoji(pack) {
