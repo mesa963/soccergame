@@ -123,6 +123,7 @@ public class GameService {
                         p.setGuessed(false);
                         p.setEliminated(false);
                         p.setPendingGuess(null);
+                        p.setPendingCategory(null);
                         p.setGuessOrder(null);
                         p.setImpostor(false);
 
@@ -154,20 +155,36 @@ public class GameService {
                         }
                 }
 
-                // Pick random word (prefer a different one than the current if possible)
-                List<ImpostorWord> candidates = new ArrayList<>(words);
+                // Exclude words already used in this room's session
+                Set<String> used = room.getUsedImpostorWords() != null ? room.getUsedImpostorWords() : new HashSet<>();
+                List<ImpostorWord> available = words.stream()
+                                .filter(w -> !used.contains(w.getWord()))
+                                .collect(Collectors.toList());
+
+                // If none available (all used), reset used set and use full list
+                if (available.isEmpty()) {
+                        used.clear();
+                        available = new ArrayList<>(words);
+                }
+
+                // Prefer a different word than the current one when possible
+                List<ImpostorWord> candidates = new ArrayList<>(available);
                 if (candidates.size() > 1 && room.getCurrentWord() != null) {
                         candidates = candidates.stream()
                                         .filter(w -> !w.getWord().equals(room.getCurrentWord()))
                                         .collect(Collectors.toList());
                         if (candidates.isEmpty()) {
-                                candidates = new ArrayList<>(words);
+                                candidates = new ArrayList<>(available);
                         }
                 }
 
                 ImpostorWord selected = candidates.get(new Random().nextInt(candidates.size()));
                 room.setCurrentCategory(selected.getCategory());
                 room.setCurrentWord(selected.getWord());
+
+                // Mark as used for this session
+                used.add(selected.getWord());
+                room.setUsedImpostorWords(used);
 
                 // Assign Impostors and Visual Order
                 List<GamePlayer> players = room.getPlayers();
@@ -198,9 +215,11 @@ public class GameService {
                         if (impostorIds.contains(p.getId())) {
                                 p.setImpostor(true);
                                 p.setPendingGuess(room.isImpostorHints() ? selected.getHint() : null);
+                                p.setPendingCategory(selected.getCategory());
                         } else {
                                 p.setImpostor(false);
                                 p.setPendingGuess(null);
+                                p.setPendingCategory(null);
                         }
 
                         // Set consistent visual order

@@ -53,6 +53,11 @@ public class GameRoom {
     private String currentWord; // For the round
     private String impostorCategoryPreference; // "RANDOM" or specific category
 
+    @ElementCollection
+    @CollectionTable(name = "room_used_impostor_words", joinColumns = @JoinColumn(name = "room_id"))
+    @Column(name = "word")
+    private Set<String> usedImpostorWords = new HashSet<>();
+
     public enum RoomStatus {
         WAITING, IN_GAME, FINISHED
     }
@@ -190,5 +195,13 @@ public class GameRoom {
 
     public void setImpostorCategoryPreference(String impostorCategoryPreference) {
         this.impostorCategoryPreference = impostorCategoryPreference;
+    }
+
+    public Set<String> getUsedImpostorWords() {
+        return usedImpostorWords;
+    }
+
+    public void setUsedImpostorWords(Set<String> usedImpostorWords) {
+        this.usedImpostorWords = usedImpostorWords;
     }
 }

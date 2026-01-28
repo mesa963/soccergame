@@ -432,7 +432,10 @@ async function initGame() {
                             <span style="font-size:3rem;">🤫</span>
                             <h2 style="color: #ef4444; margin: 10px 0;">¡ERES EL IMPOSTOR!</h2>
                             <p style="color: #fca5a5;">Tu objetivo es engañar a los demás y descubrir la palabra secreta.</p>
-                            ${currentPlayer.pendingGuess ? `<div style="margin-top:15px; background:rgba(251, 191, 36, 0.1); padding:10px; border-radius:8px; border:1px solid #fbbf24;"><p style="color:#fbbf24; font-weight:bold; font-size:0.9rem;">PISTA SECRETA</p><p style="color:white; font-style:italic;">"${currentPlayer.pendingGuess}"</p></div>` : ''}
+                            ${currentPlayer.pendingGuess || currentPlayer.pendingCategory ? `<div style="margin-top:15px; background:rgba(251, 191, 36, 0.1); padding:10px; border-radius:8px; border:1px solid #fbbf24;">
+                                ${currentPlayer.pendingGuess ? `<p style="color:#fbbf24; font-weight:bold; font-size:0.9rem;">PISTA SECRETA</p><p style="color:white; font-style:italic;">"${currentPlayer.pendingGuess}"</p>` : ''}
+                                ${currentPlayer.pendingCategory ? `<p style="color:#fbbf24; font-weight:bold; font-size:0.9rem; margin-top:8px;">CATEGORÍA</p><p style="color:white; font-style:italic;">${currentPlayer.pendingCategory}</p>` : ''}
+                            </div>` : ''}
                         </div>
                      `;
                 } else {

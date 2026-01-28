@@ -34,6 +34,7 @@ public class GamePlayer {
     @Column(columnDefinition = "NUMBER(1) DEFAULT 0 NOT NULL")
     private boolean isImpostor;
     private String pendingGuess;
+    private String pendingCategory;
     private Integer guessOrder; // 1st, 2nd, etc.
     private Integer visualOrder;
 
@@ -121,6 +122,14 @@ public class GamePlayer {
 
     public void setPendingGuess(String pendingGuess) {
         this.pendingGuess = pendingGuess;
+    }
+
+    public String getPendingCategory() {
+        return pendingCategory;
+    }
+
+    public void setPendingCategory(String pendingCategory) {
+        this.pendingCategory = pendingCategory;
     }
 
     public Integer getGuessOrder() {
