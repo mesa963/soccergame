@@ -154,8 +154,18 @@ public class GameService {
                         }
                 }
 
-                // Pick random word
-                ImpostorWord selected = words.get(new Random().nextInt(words.size()));
+                // Pick random word (prefer a different one than the current if possible)
+                List<ImpostorWord> candidates = new ArrayList<>(words);
+                if (candidates.size() > 1 && room.getCurrentWord() != null) {
+                        candidates = candidates.stream()
+                                        .filter(w -> !w.getWord().equals(room.getCurrentWord()))
+                                        .collect(Collectors.toList());
+                        if (candidates.isEmpty()) {
+                                candidates = new ArrayList<>(words);
+                        }
+                }
+
+                ImpostorWord selected = candidates.get(new Random().nextInt(candidates.size()));
                 room.setCurrentCategory(selected.getCategory());
                 room.setCurrentWord(selected.getWord());
 
