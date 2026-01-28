@@ -56,9 +56,22 @@ async function joinRoom(roomCode, playerName) {
         if (!res.ok) throw new Error("No se pudo unir a la sala. Revisa el código.");
         const player = await res.json();
         currentPlayer = player;
-        currentRoom = { roomCode: roomCode };
+        // Obtener datos completos de la sala para conocer el modo (IMPOSTOR) y categoría
+        try {
+            const roomRes = await fetch(`/api/rooms/${roomCode}`);
+            if (roomRes.ok) {
+                currentRoom = await roomRes.json();
+            } else {
+                currentRoom = { roomCode: roomCode };
+            }
+        } catch (e) {
+            currentRoom = { roomCode: roomCode };
+        }
+
         setupLobby(currentRoom);
         connectWebSocket(roomCode);
+        // Asegurar lista de jugadores actualizada
+        await refreshLobby();
         showView('lobby');
     } catch (err) {
         alert(err.message);
