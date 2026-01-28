@@ -31,8 +31,10 @@ public class RoomController {
             @RequestParam(defaultValue = "FUTBOL") String packType,
             @RequestParam(defaultValue = "GUESS_WHO") String gameType,
             @RequestParam(defaultValue = "1") int impostorCount,
-            @RequestParam(defaultValue = "false") boolean hints) {
-        return ResponseEntity.ok(gameService.createRoom(playerName, packType, gameType, impostorCount, hints));
+            @RequestParam(defaultValue = "false") boolean hints,
+            @RequestParam(required = false, defaultValue = "RANDOM") String impostorCategory) {
+        return ResponseEntity
+                .ok(gameService.createRoom(playerName, packType, gameType, impostorCount, hints, impostorCategory));
     }
 
     @PostMapping("/join")
@@ -87,6 +89,11 @@ public class RoomController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/impostor-categories")
+    public ResponseEntity<List<String>> getImpostorCategories() {
+        return ResponseEntity.ok(gameService.getImpostorCategories());
+    }
+
     @PostMapping("/{roomCode}/reset")
     public ResponseEntity<Void> resetGame(@PathVariable String roomCode) {
         gameService.resetGame(roomCode);
@@ -103,6 +110,19 @@ public class RoomController {
     public ResponseEntity<Void> executeChange(@PathVariable Long targetId, @RequestParam Long voterId,
             @RequestParam boolean yes) {
         gameService.processVote(targetId, voterId, yes, "CHANGE");
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/players/{voterId}/accuse")
+    public ResponseEntity<Void> castAccuseVote(@PathVariable Long voterId, @RequestParam Long targetId) {
+        gameService.castAccuseVote(voterId, targetId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/impostor-words")
+    public ResponseEntity<Void> addImpostorWord(@RequestParam String category, @RequestParam String word,
+            @RequestParam String hint) {
+        gameService.addImpostorWord(category, word, hint);
         return ResponseEntity.ok().build();
     }
 

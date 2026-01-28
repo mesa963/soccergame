@@ -22,15 +22,21 @@
                     <input type="text" id="playerName" placeholder="Tu Nombre" maxlength="15">
                 </div>
 
-                <div class="input-group" style="margin-top: 10px;">
+                <div class="input-group" style="flex-direction: column;">
                     <label
                         style="color:white; display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Modo
                         de Juego</label>
-                    <select id="gameModeSelection" class="glass-input" onchange="toggleGameConfig()"
-                        style="width: 100%; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
-                        <option value="GUESS_WHO">🕵️‍♂️ Adivina Quién (Categorías)</option>
-                        <option value="IMPOSTOR">🎭 El Impostor</option>
-                    </select>
+                    <div class="game-mode-container">
+                        <div class="game-mode-card selected" onclick="selectGameMode('GUESS_WHO', this)">
+                            <span class="game-mode-icon">🕵️‍♂️</span>
+                            <span class="game-mode-title">Adivina Quién</span>
+                        </div>
+                        <div class="game-mode-card impostor-mode" onclick="selectGameMode('IMPOSTOR', this)">
+                            <span class="game-mode-icon">🎭</span>
+                            <span class="game-mode-title">El Impostor</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="gameModeSelection" value="GUESS_WHO">
                 </div>
 
                 <!-- Pack Selection (Guess Who) -->
@@ -46,10 +52,7 @@
                 </div>
 
                 <!-- Impostor Config -->
-                <div id="impostorConfig" class="input-group hidden" style="margin-top: 10px;">
-                    <label
-                        style="color:white; display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Configuración
-                        Impostor</label>
+                <div id="impostorConfig" class="input-group hidden" style="margin-top: 10px; flex-direction:column;">
                     <div style="display:flex; gap:10px;">
                         <input type="number" id="impostorCount" placeholder="# Impostores" value="1" min="1" max="3"
                             style="flex:1; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
@@ -57,6 +60,10 @@
                             <input type="checkbox" id="impostorHints" style="margin-right:5px;"> Pistas
                         </div>
                     </div>
+                    <select id="impostorCategory" class="glass-input"
+                        style="width: 100%; margin-top:10px; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
+                        <option value="RANDOM">🎲 Aleatorio</option>
+                    </select>
                 </div>
                 <div class="actions">
                     <button id="btnCreateRoom" class="primary-btn">Crear Sala</button>
@@ -85,11 +92,29 @@
                 <ul id="playerList"></ul>
 
                 <!-- Añadir Categoría (Visible para todos) -->
-                <div id="addCategorySection">
+                <div id="addCategorySection" class="hidden">
                     <div class="input-group">
                         <input type="text" id="newCategoryName"
                             placeholder="Nueva Categoría (ej: Ganadores de 2 Mundiales)">
                         <button id="btnAddCategory" class="secondary-btn">Añadir</button>
+                    </div>
+                </div>
+
+                <!-- Añadir Palabra Impostor (Solo Impostor Mode) -->
+                <div id="addImpostorWordSection" class="hidden">
+                    <div style="margin-bottom:10px; color:#fbbf24; font-size:0.9rem;">
+                        Añadiendo a categoría: <strong><span id="currentImpostorCategoryDisplay">...</span></strong>
+                    </div>
+                    <!-- Hidden input to store the actual category value to send -->
+                    <input type="hidden" id="currentImpostorCategoryValue">
+
+                    <div class="input-group" style="flex-direction:column; gap:5px;">
+                        <input type="text" id="newImpostorWord" placeholder="Palabra (ej: Messi)" style="width:100%;">
+                        <div style="display:flex; gap:5px; width:100%;">
+                            <input type="text" id="newImpostorHint" placeholder="Pista (ej: El GOAT)" style="flex:1;">
+                            <button id="btnAddImpostorWord" class="secondary-btn"
+                                style="background:#f59e0b; color:black;">Añadir</button>
+                        </div>
                     </div>
                 </div>
                 <div class="actions">
@@ -186,6 +211,24 @@
                 <button id="btnSubmitGuess" class="primary-btn">Confirmar</button>
                 <button id="btnCancelGuess" class="cancel-btn">Cancelar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Overlay de Eliminación -->
+    <div id="ejectionOverlay" class="overlay hidden">
+        <div class="overlay-content">
+            <h1 class="ejected-text">EXPULSADO</h1>
+            <p id="ejectionMessage" class="subtext">Nadie te escuchó...</p>
+            <div class="astronaut-animation">👨‍🚀</div>
+        </div>
+    </div>
+
+    <!-- Overlay de Game Over -->
+    <div id="gameOverOverlay" class="overlay hidden">
+        <div class="overlay-content">
+            <h1 id="winnerTitle" class="winner-text">VICTORIA</h1>
+            <p id="winnerMessage" class="subtext">Los Inocentes han ganado.</p>
+            <button class="primary-btn" onclick="closeGameOver()">Continuar</button>
         </div>
     </div>
 

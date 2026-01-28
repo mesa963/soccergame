@@ -37,11 +37,21 @@ public class GameRoom {
     @ElementCollection
     private Set<Long> noVotes = new HashSet<>();
 
+    @ElementCollection
+    @CollectionTable(name = "room_accuse_votes", joinColumns = @JoinColumn(name = "room_id"))
+    @MapKeyColumn(name = "voter_id")
+    @Column(name = "target_id")
+    private java.util.Map<Long, Long> accuseVotes = new java.util.HashMap<>();
+
     // Impostor Game Fields
+    @Column(columnDefinition = "NUMBER(1) DEFAULT 1 NOT NULL")
     private int impostorCount = 1;
+
+    @Column(columnDefinition = "NUMBER(1) DEFAULT 0 NOT NULL")
     private boolean impostorHints = false;
     private String currentCategory; // For the round
     private String currentWord; // For the round
+    private String impostorCategoryPreference; // "RANDOM" or specific category
 
     public enum RoomStatus {
         WAITING, IN_GAME, FINISHED
@@ -126,6 +136,14 @@ public class GameRoom {
         this.noVotes = noVotes;
     }
 
+    public java.util.Map<Long, Long> getAccuseVotes() {
+        return accuseVotes;
+    }
+
+    public void setAccuseVotes(java.util.Map<Long, Long> accuseVotes) {
+        this.accuseVotes = accuseVotes;
+    }
+
     public GameType getGameType() {
         return gameType;
     }
@@ -164,5 +182,13 @@ public class GameRoom {
 
     public void setCurrentWord(String currentWord) {
         this.currentWord = currentWord;
+    }
+
+    public String getImpostorCategoryPreference() {
+        return impostorCategoryPreference;
+    }
+
+    public void setImpostorCategoryPreference(String impostorCategoryPreference) {
+        this.impostorCategoryPreference = impostorCategoryPreference;
     }
 }

@@ -1,0 +1,25 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.example:soccer-game >-----------------------
+[INFO] Building soccer-game 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ soccer-game ---
+[INFO] Deleting D:\Proyectos\soccergame\target
+[INFO] 
+[INFO] --- resources:3.2.0:resources (default-resources) @ soccer-game ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] Copying 1 resource
+[INFO] Copying 4 resources
+[INFO] 
+[INFO] --- compiler:3.10.1:compile (default-compile) @ soccer-game ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 13 source files to D:\Proyectos\soccergame\target\classes
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  14.985 s
+[INFO] Finished at: 2026-01-27T19:32:11-05:00
+[INFO] ------------------------------------------------------------------------

@@ -508,5 +508,149 @@ button {
 
 .voting-card p {
     font-weight: 600;
-    font-size: 1.1rem;
+}
+
+/* Game Mode Selection */
+.game-mode-container {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.game-mode-card {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+    opacity: 0.7;
+}
+
+.game-mode-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    opacity: 1;
+}
+
+.game-mode-card.selected {
+    border-color: var(--primary);
+    background: rgba(0, 242, 255, 0.1);
+    box-shadow: 0 0 15px var(--primary-glow);
+    opacity: 1;
+}
+
+.game-mode-card.impostor-mode.selected {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+.game-mode-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    display: block;
+}
+
+
+/* Overlays Animations */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: black;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    text-align: center;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.overlay-content {
+    max-width: 80%;
+}
+
+.ejected-text {
+    font-size: 4rem;
+    color: #ef4444;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    margin-bottom: 20px;
+    animation: zoomIn 1s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+.winner-text {
+    font-size: 5rem;
+    font-weight: 900;
+    background: linear-gradient(to right, #00f2ff, #7000ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 20px;
+    animation: slideUp 1s ease-out;
+}
+
+.subtext {
+    font-size: 1.5rem;
+    opacity: 0.8;
+    margin-bottom: 40px;
+}
+
+.astronaut-animation {
+    font-size: 8rem;
+    animation: floatAway 6s linear infinite;
+    display: inline-block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes zoomIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    70% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes floatAway {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(200px, -50px) rotate(360deg);
+        opacity: 0;
+    }
 }

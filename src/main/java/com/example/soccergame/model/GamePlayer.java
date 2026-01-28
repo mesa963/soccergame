@@ -30,10 +30,15 @@ public class GamePlayer {
 
     private boolean host = false;
     private boolean guessed = false;
+
+    @Column(columnDefinition = "NUMBER(1) DEFAULT 0 NOT NULL")
     private boolean isImpostor;
     private String pendingGuess;
     private Integer guessOrder; // 1st, 2nd, etc.
     private Integer visualOrder;
+
+    @Column(columnDefinition = "NUMBER(1) DEFAULT 0 NOT NULL")
+    private boolean eliminated = false;
 
     public GamePlayer() {
     }
@@ -132,5 +137,13 @@ public class GamePlayer {
 
     public void setVisualOrder(Integer visualOrder) {
         this.visualOrder = visualOrder;
+    }
+
+    public boolean isEliminated() {
+        return eliminated;
+    }
+
+    public void setEliminated(boolean eliminated) {
+        this.eliminated = eliminated;
     }
 }

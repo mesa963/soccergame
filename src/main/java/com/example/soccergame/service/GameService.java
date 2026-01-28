@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class GameService {
@@ -29,7 +30,7 @@ public class GameService {
 
         @Transactional
         public GameRoom createRoom(String playerName, String packType, String gameTypeStr, int impostorCount,
-                        boolean hints) {
+                        boolean hints, String impostorCategory) {
                 String roomCode = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
                 GameRoom room = new GameRoom();
                 room.setRoomCode(roomCode);
@@ -40,6 +41,7 @@ public class GameService {
                         type = GameRoom.GameType.IMPOSTOR;
                         room.setImpostorCount(impostorCount > 0 ? impostorCount : 1);
                         room.setImpostorHints(hints);
+                        room.setImpostorCategoryPreference(impostorCategory);
                 } else {
                         room.setSelectedPack(packType != null ? packType : "FUTBOL");
                 }
@@ -116,10 +118,21 @@ public class GameService {
                         p.setAssignedCharacter(characters.get(i));
                         // Find this player in the shuffled list to assign order
                         p.setVisualOrder(shuffledPlayers.indexOf(p));
+
+                        // Reset status for "Play Again"
+                        p.setGuessed(false);
+                        p.setEliminated(false);
+                        p.setPendingGuess(null);
+                        p.setGuessOrder(null);
+                        p.setImpostor(false);
+
                         playerRepository.save(p);
                 }
 
                 room.setStatus(GameRoom.RoomStatus.IN_GAME);
+                room.getAccuseVotes().clear();
+                room.getYesVotes().clear();
+                room.getNoVotes().clear();
                 roomRepository.save(room);
                 messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(), "GAME_STARTED");
         }
@@ -130,32 +143,66 @@ public class GameService {
                         throw new RuntimeException("No words configured for Impostor Game");
                 }
 
+                // Filter by preference if set
+                if (room.getImpostorCategoryPreference() != null
+                                && !room.getImpostorCategoryPreference().equals("RANDOM")) {
+                        List<ImpostorWord> filtered = words.stream()
+                                        .filter(w -> w.getCategory().equals(room.getImpostorCategoryPreference()))
+                                        .collect(Collectors.toList());
+                        if (!filtered.isEmpty()) {
+                                words = filtered;
+                        }
+                }
+
                 // Pick random word
                 ImpostorWord selected = words.get(new Random().nextInt(words.size()));
                 room.setCurrentCategory(selected.getCategory());
                 room.setCurrentWord(selected.getWord());
 
-                // Assign Impostors
+                // Assign Impostors and Visual Order
                 List<GamePlayer> players = room.getPlayers();
-                Collections.shuffle(players);
+
+                // Determine visual order
+                List<GamePlayer> visualOrderList = new ArrayList<>(players);
+                Collections.shuffle(visualOrderList);
 
                 int impostorCount = Math.min(room.getImpostorCount(), players.size() - 1);
                 if (impostorCount < 1)
                         impostorCount = 1;
 
-                for (int i = 0; i < players.size(); i++) {
-                        GamePlayer p = players.get(i);
-                        p.setImpostor(i < impostorCount);
-                        if (p.isImpostor() && room.isImpostorHints()) {
-                                p.setPendingGuess(selected.getHint()); // Hack: using pendingGuess to store hint
-                                                                       // temporarily for frontend
+                // Pick N random players for impostors
+                List<GamePlayer> potentialImpostors = new ArrayList<>(players);
+                Collections.shuffle(potentialImpostors);
+                Set<Long> impostorIds = potentialImpostors.stream()
+                                .limit(impostorCount)
+                                .map(GamePlayer::getId)
+                                .collect(Collectors.toSet());
+
+                for (GamePlayer p : players) {
+                        // Reset everything
+                        p.setGuessed(false);
+                        p.setEliminated(false);
+                        p.setGuessOrder(null);
+                        p.setAssignedCharacter(null); // Not used in this mode but clean up
+
+                        if (impostorIds.contains(p.getId())) {
+                                p.setImpostor(true);
+                                p.setPendingGuess(room.isImpostorHints() ? selected.getHint() : null);
                         } else {
+                                p.setImpostor(false);
                                 p.setPendingGuess(null);
                         }
+
+                        // Set consistent visual order
+                        p.setVisualOrder(visualOrderList.indexOf(p));
+
                         playerRepository.save(p);
                 }
 
                 room.setStatus(GameRoom.RoomStatus.IN_GAME);
+                room.getAccuseVotes().clear();
+                room.getYesVotes().clear();
+                room.getNoVotes().clear();
                 roomRepository.save(room);
                 messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(), "GAME_STARTED");
         }
@@ -259,28 +306,11 @@ public class GameService {
                 GameRoom room = roomRepository.findByRoomCode(roomCode)
                                 .orElseThrow(() -> new RuntimeException("Room not found"));
 
-                List<GamePlayer> players = room.getPlayers();
-                List<CategoryItem> characters = characterRepository.findByPackType(room.getSelectedPack());
-
-                if (characters.size() < players.size()) {
-                        throw new RuntimeException("Not enough characters in DB for pack '" + room.getSelectedPack() +
-                                        "'. Found " + characters.size() + ", needed " + players.size());
+                if (room.getGameType() == GameRoom.GameType.IMPOSTOR) {
+                        startImpostorGame(room);
+                } else {
+                        startGuessWhoGame(room);
                 }
-
-                Collections.shuffle(characters);
-
-                for (int i = 0; i < players.size(); i++) {
-                        GamePlayer p = players.get(i);
-                        p.setAssignedCharacter(characters.get(i));
-                        p.setGuessed(false);
-                        p.setPendingGuess(null);
-                        p.setGuessOrder(null);
-                        playerRepository.save(p);
-                }
-
-                room.setStatus(GameRoom.RoomStatus.IN_GAME);
-                roomRepository.save(room);
-                messagingTemplate.convertAndSend("/topic/room/" + roomCode, "GAME_STARTED");
         }
 
         @Transactional
@@ -307,11 +337,11 @@ public class GameService {
                 List<Long> assignedIds = target.getRoom().getPlayers().stream()
                                 .filter(p -> p.getAssignedCharacter() != null)
                                 .map(p -> p.getAssignedCharacter().getId())
-                                .toList();
+                                .collect(Collectors.toList());
 
                 List<CategoryItem> available = characters.stream()
                                 .filter(c -> !assignedIds.contains(c.getId()))
-                                .toList();
+                                .collect(Collectors.toList());
 
                 if (available.isEmpty()) {
                         // Fallback: if we truly ran out (rare), just pick random from all
@@ -449,6 +479,14 @@ public class GameService {
                 return impostorWordRepository.findAll();
         }
 
+        public List<String> getImpostorCategories() {
+                return impostorWordRepository.findAll().stream()
+                                .map(ImpostorWord::getCategory)
+                                .distinct()
+                                .sorted()
+                                .collect(Collectors.toList());
+        }
+
         @Transactional
         public void addImpostorWord(String category, String word, String hint) {
                 ImpostorWord w = new ImpostorWord(null, category, word, hint);
@@ -458,5 +496,99 @@ public class GameService {
         @Transactional
         public void deleteImpostorWord(Long id) {
                 impostorWordRepository.deleteById(id);
+        }
+
+        @Transactional
+        public void castAccuseVote(Long voterId, Long targetId) {
+                GamePlayer voter = playerRepository.findById(voterId)
+                                .orElseThrow(() -> new RuntimeException("Voter not found"));
+
+                if (voter.isEliminated()) {
+                        throw new RuntimeException("Eliminated players cannot vote");
+                }
+
+                GameRoom room = voter.getRoom();
+
+                // Store vote
+                room.getAccuseVotes().put(voterId, targetId);
+                roomRepository.save(room);
+
+                // Check completion (only active players count)
+                long activePlayers = room.getPlayers().stream().filter(p -> !p.isEliminated()).count();
+                int votesCast = room.getAccuseVotes().size();
+
+                messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(),
+                                "ACCUSE_PROGRESS:" + votesCast + ":" + activePlayers);
+
+                if (votesCast >= activePlayers) {
+                        resolveAccusation(room);
+                }
+        }
+
+        private void resolveAccusation(GameRoom room) {
+                Map<Long, Integer> counts = new HashMap<>();
+                for (Long targetId : room.getAccuseVotes().values()) {
+                        counts.put(targetId, counts.getOrDefault(targetId, 0) + 1);
+                }
+
+                // Find max
+                Long maxTargetId = null;
+                int maxVotes = -1;
+                boolean tie = false;
+
+                for (Map.Entry<Long, Integer> entry : counts.entrySet()) {
+                        if (entry.getValue() > maxVotes) {
+                                maxVotes = entry.getValue();
+                                maxTargetId = entry.getKey();
+                                tie = false;
+                        } else if (entry.getValue() == maxVotes) {
+                                tie = true;
+                        }
+                }
+
+                if (tie || maxTargetId == null) {
+                        // Tie -> No one ejected, game continues
+                        messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(),
+                                        "ACCUSE_RESULT:TIE:Nadie fue expulsado (Empate). El juego continúa.");
+                } else {
+                        GamePlayer accused = playerRepository.findById(maxTargetId).orElse(null);
+                        if (accused != null) {
+                                if (accused.isImpostor()) {
+                                        // Impostor caught -> Town Wins
+                                        room.setStatus(GameRoom.RoomStatus.FINISHED);
+                                        roomRepository.save(room);
+                                        messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(),
+                                                        "ACCUSE_RESULT:IMPOSTOR_CAUGHT:¡" + accused.getName()
+                                                                        + " era el Impostor! Ganan los Aldeanos. 🏆");
+                                } else {
+                                        // Innocent -> Ejected
+                                        accused.setEliminated(true);
+                                        playerRepository.save(accused);
+
+                                        messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(),
+                                                        "ACCUSE_RESULT:INNOCENT_EJECTED:" + accused.getName()
+                                                                        + " NO era el Impostor. Ha sido eliminado. 💀");
+
+                                        // Check if Impostors win (Impostors >= Innocents)
+                                        long activeInnocents = room.getPlayers().stream()
+                                                        .filter(p -> !p.isEliminated() && !p.isImpostor()).count();
+                                        long activeImpostors = room.getPlayers().stream()
+                                                        .filter(p -> !p.isEliminated() && p.isImpostor()).count();
+
+                                        if (activeImpostors >= activeInnocents) {
+                                                room.setStatus(GameRoom.RoomStatus.FINISHED);
+                                                roomRepository.save(room);
+                                                messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(),
+                                                                "GAME_OVER:IMPOSTOR_WINS:¡Los Impostores han tomado el control!");
+                                        }
+                                }
+                        }
+                }
+
+                // Reset votes for next round if game continues
+                if (room.getStatus() != GameRoom.RoomStatus.FINISHED) {
+                        room.getAccuseVotes().clear();
+                        roomRepository.save(room);
+                }
         }
 }

@@ -1,10 +1,13 @@
 com\example\soccergame\repository\GameRoomRepository.class
 com\example\soccergame\model\GameRoom$RoomStatus.class
+com\example\soccergame\repository\ImpostorWordRepository.class
 com\example\soccergame\config\WebSocketConfig.class
 com\example\soccergame\service\GameService.class
 com\example\soccergame\model\GameRoom.class
+com\example\soccergame\model\ImpostorWord.class
 com\example\soccergame\model\GamePlayer.class
 com\example\soccergame\SoccerGameApplication.class
+com\example\soccergame\model\GameRoom$GameType.class
 com\example\soccergame\repository\CategoryItemRepository.class
 com\example\soccergame\controller\AdminController.class
 com\example\soccergame\controller\RoomController.class
