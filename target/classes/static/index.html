@@ -76,8 +76,7 @@
                                 </label>
                             </div>
                         </div>
-                        <select id="impostorCategory" class="glass-input"
-                            style="width: 100%; margin-top:10px; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
+                        <select id="impostorCategory" class="game-select" style="margin-top:10px;">
                             <option value="RANDOM">🎲 Aleatorio</option>
                         </select>
                     </div>
@@ -130,18 +129,19 @@
 
                 <!-- Añadir Palabra Impostor (Solo Impostor Mode) -->
                 <div id="addImpostorWordSection" class="hidden">
-                    <div style="margin-bottom:10px; color:#fbbf24; font-size:0.9rem;">
-                        Añadiendo a categoría: <strong><span id="currentImpostorCategoryDisplay">...</span></strong>
+                    <div style="margin-bottom:10px; color:#ffffff; font-size:0.9rem;">
+                        Añadir a categoría:
+                        <select id="impostorCategorySelect" class="game-select"
+                            style="padding: 5px 30px 5px 12px; font-size: 0.9rem;">
+                        </select>
                     </div>
-                    <!-- Hidden input to store the actual category value to send -->
-                    <input type="hidden" id="currentImpostorCategoryValue">
 
                     <div class="input-group" style="flex-direction:column; gap:5px;">
                         <input type="text" id="newImpostorWord" placeholder="Palabra (ej: Messi)" style="width:100%;">
                         <div style="display:flex; gap:5px; width:100%;">
                             <input type="text" id="newImpostorHint" placeholder="Pista (ej: El GOAT)" style="flex:1;">
                             <button id="btnAddImpostorWord" class="secondary-btn"
-                                style="background:#f59e0b; color:black;">Añadir</button>
+                                style="background:var(--primary); color:black;">Añadir</button>
                         </div>
                     </div>
                 </div>
@@ -270,8 +270,7 @@
                 </label>
             </div>
 
-            <select id="playAgainCategorySelect" class="glass-input" disabled
-                style="width: 100%; margin-top:10px; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; opacity: 0.5;">
+            <select id="playAgainCategorySelect" class="game-select" disabled style="margin-top:10px; opacity: 0.5;">
                 <option value="RANDOM">-- Seleccionar --</option>
             </select>
 

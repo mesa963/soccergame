@@ -251,12 +251,11 @@ async function addNewCategory() {
 async function addNewImpostorWord() {
     const wordInput = document.getElementById('newImpostorWord');
     const hintInput = document.getElementById('newImpostorHint');
-    const catInput = document.getElementById('currentImpostorCategoryValue');
+    const catSelect = document.getElementById('impostorCategorySelect');
 
     const word = wordInput.value.trim();
     const hint = hintInput.value.trim();
-    // Si la categoría estaba vacía o era random, usamos lo que haya o "General"
-    const category = catInput.value.trim() || "General";
+    const category = catSelect.value.trim() || "General";
 
     if (!word || !hint) {
         alert("Falta palabra o pista");
@@ -450,26 +449,8 @@ function updatePlayerListUI(players) {
         addCatSection.classList.add('hidden');
         addImpSection.classList.remove('hidden');
 
-        // Update Label
-        const catPreference = currentRoom.impostorCategoryPreference;
-        const displaySpan = document.getElementById('currentImpostorCategoryDisplay');
-        const valueInput = document.getElementById('currentImpostorCategoryValue');
-
-        if (catPreference && catPreference !== 'RANDOM') {
-            displaySpan.innerText = catPreference;
-            valueInput.value = catPreference;
-            // Bloqueamos edición si quisiéramos, pero por ahora asumimos que solo se añade a esta.
-        } else {
-            displaySpan.innerText = "Cualquiera (Aleatorio)";
-            // Si es RANDOM, quizás queramos dejarles elegir o poner una default.
-            // Para simplificar, usaremos "General" o dejaremos que el usuario lo vea.
-            // O mejor aún, convertimos el span en input si es random? 
-            // El usuario pidió "ver qué categoría se escogió". Si fue random, se escogió random.
-            // Pero para añadir palabra necesitamos una categoría concreta.
-            // Asignemos "Varios" por defecto si es random.
-            valueInput.value = "Varios";
-        }
-
+        // Populate Category Select for Adding Words
+        loadImpostorCategories('impostorCategorySelect');
     } else {
         addCatSection.classList.remove('hidden');
         addImpSection.classList.add('hidden');
@@ -1033,16 +1014,21 @@ function closeGameOver() {
 }
 
 // Dynamic Packs
-async function loadImpostorCategories() {
+async function loadImpostorCategories(targetId = 'impostorCategory') {
     try {
         const res = await fetch('/api/rooms/impostor-categories');
         if (res.ok) {
             const categories = await res.json();
-            const select = document.getElementById('impostorCategory');
+            const select = document.getElementById(targetId);
             if (select && categories.length > 0) {
-                // Keep Random option
-                select.innerHTML = '<option value="RANDOM">🎲 Aleatorio</option>' +
-                    categories.map(c => `<option value="${c}">${c}</option>`).join('');
+                const currentVal = select.value;
+                let options = '';
+                if (targetId === 'impostorCategory') {
+                    options = '<option value="RANDOM">🎲 Aleatorio</option>';
+                }
+                options += categories.map(c => `<option value="${c}">${c}</option>`).join('');
+                select.innerHTML = options;
+                if (currentVal) select.value = currentVal;
             }
         }
     } catch (e) { console.error("Could not load impostor categories", e); }
