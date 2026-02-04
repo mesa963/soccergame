@@ -654,3 +654,109 @@ button {
         opacity: 0;
     }
 }
+
+/* Play Again Modal Options */
+.play-option-card {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.play-option-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+    border-color: var(--primary);
+}
+
+.play-option-card input[type="radio"] {
+    margin-right: 15px;
+    accent-color: var(--primary);
+    width: 20px;
+    height: 20px;
+}
+
+/* Secret Card Enhancements */
+.secret-card-container {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.2) 100%);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 30px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.secret-card-header {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.player-name-display {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(to right, #fff, #bbb);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 20px;
+    display: block;
+}
+
+.role-badge {
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    display: inline-block;
+    margin-bottom: 15px;
+}
+
+.role-impostor {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.role-innocent {
+    color: white;
+    text-shadow: 0 0 20px var(--primary-glow);
+    margin: 10px 0;
+}
+
+.voting-progress-area {
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid #fbbf24;
+    color: #fbbf24;
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 0 5px rgba(251, 191, 36, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(251, 191, 36, 0.2);
+    }
+}

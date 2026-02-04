@@ -7,8 +7,7 @@ import javax.persistence.*;
 @Table(name = "SC_PLAYERS")
 public class GamePlayer {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "player_seq")
-    @SequenceGenerator(name = "player_seq", sequenceName = "PLAYER_SEQ", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String name;
@@ -31,14 +30,14 @@ public class GamePlayer {
     private boolean host = false;
     private boolean guessed = false;
 
-    @Column(columnDefinition = "NUMBER(1) DEFAULT 0 NOT NULL")
+    @Column(nullable = false)
     private boolean isImpostor;
     private String pendingGuess;
     private String pendingCategory;
     private Integer guessOrder; // 1st, 2nd, etc.
     private Integer visualOrder;
 
-    @Column(columnDefinition = "NUMBER(1) DEFAULT 0 NOT NULL")
+    @Column(nullable = false)
     private boolean eliminated = false;
 
     public GamePlayer() {

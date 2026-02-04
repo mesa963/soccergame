@@ -6,8 +6,7 @@ import javax.persistence.*;
 @Table(name = "SC_IMPOSTOR_WORDS")
 public class ImpostorWord {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "imp_word_seq")
-    @SequenceGenerator(name = "imp_word_seq", sequenceName = "IMP_WORD_SEQ", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String category;

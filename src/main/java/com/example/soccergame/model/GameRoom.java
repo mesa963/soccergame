@@ -10,8 +10,7 @@ import java.util.Set;
 @Table(name = "SC_ROOMS")
 public class GameRoom {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "room_seq")
-    @SequenceGenerator(name = "room_seq", sequenceName = "ROOM_SEQ", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(unique = true, nullable = false)
@@ -44,14 +43,17 @@ public class GameRoom {
     private java.util.Map<Long, Long> accuseVotes = new java.util.HashMap<>();
 
     // Impostor Game Fields
-    @Column(columnDefinition = "NUMBER(1) DEFAULT 1 NOT NULL")
+    @Column(nullable = false)
     private int impostorCount = 1;
 
-    @Column(columnDefinition = "NUMBER(1) DEFAULT 0 NOT NULL")
+    @Column(nullable = false)
     private boolean impostorHints = false;
     private String currentCategory; // For the round
     private String currentWord; // For the round
     private String impostorCategoryPreference; // "RANDOM" or specific category
+
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean showCategoryToImpostor = true; // Default to true for backward compatibility or preference
 
     @ElementCollection
     @CollectionTable(name = "room_used_impostor_words", joinColumns = @JoinColumn(name = "room_id"))
@@ -203,5 +205,13 @@ public class GameRoom {
 
     public void setUsedImpostorWords(Set<String> usedImpostorWords) {
         this.usedImpostorWords = usedImpostorWords;
+    }
+
+    public boolean isShowCategoryToImpostor() {
+        return showCategoryToImpostor;
+    }
+
+    public void setShowCategoryToImpostor(boolean showCategoryToImpostor) {
+        this.showCategoryToImpostor = showCategoryToImpostor;
     }
 }

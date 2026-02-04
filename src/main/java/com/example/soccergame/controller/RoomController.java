@@ -29,12 +29,14 @@ public class RoomController {
     @PostMapping("/create")
     public ResponseEntity<GameRoom> createRoom(@RequestParam String playerName,
             @RequestParam(defaultValue = "FUTBOL") String packType,
-            @RequestParam(defaultValue = "GUESS_WHO") String gameType,
+            @RequestParam(defaultValue = "GUESS_WHO") GameRoom.GameType gameType,
             @RequestParam(defaultValue = "1") int impostorCount,
             @RequestParam(defaultValue = "false") boolean hints,
-            @RequestParam(required = false, defaultValue = "RANDOM") String impostorCategory) {
+            @RequestParam(required = false, defaultValue = "RANDOM") String impostorCategory,
+            @RequestParam(required = false, defaultValue = "true") boolean showCategory) {
         return ResponseEntity
-                .ok(gameService.createRoom(playerName, packType, gameType, impostorCount, hints, impostorCategory));
+                .ok(gameService.createRoom(playerName, gameType, packType, impostorCount, hints, impostorCategory,
+                        showCategory));
     }
 
     @PostMapping("/join")
@@ -95,8 +97,10 @@ public class RoomController {
     }
 
     @PostMapping("/{roomCode}/reset")
-    public ResponseEntity<Void> resetGame(@PathVariable String roomCode) {
-        gameService.resetGame(roomCode);
+    public ResponseEntity<Void> resetGame(@PathVariable String roomCode,
+            @RequestParam(required = false) String impostorCategory,
+            @RequestParam(required = false) Boolean showCategory) {
+        gameService.resetGame(roomCode, impostorCategory, showCategory);
         return ResponseEntity.ok().build();
     }
 
@@ -127,7 +131,9 @@ public class RoomController {
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<String> handleRuntimeException(RuntimeException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+    public ResponseEntity<java.util.Map<String, String>> handleRuntimeException(RuntimeException e) {
+        java.util.Map<String, String> error = new java.util.HashMap<>();
+        error.put("error", e.getMessage());
+        return ResponseEntity.badRequest().body(error);
     }
 }

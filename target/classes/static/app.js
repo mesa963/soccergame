@@ -8,6 +8,7 @@ let allPlayers = [];
 let turnOrder = [];
 let pendingVoteFor = null;
 let votingType = null; // 'guess' or 'change'
+let isGameOver = false;
 
 // DOM Elements
 const views = {
@@ -22,22 +23,52 @@ function showView(viewName) {
 }
 
 // REST API calls
-async function createRoom(playerName) {
-    try {
-        const gameType = document.getElementById('gameModeSelection').value;
-        let url = `/api/rooms/create?playerName=${encodeURIComponent(playerName)}&gameType=${gameType}`;
+// Landing Page Logic
+function showCreateRoomUI() {
+    const name = document.getElementById('playerName').value.trim();
+    if (!name) { alert("¡Escribe tu nombre primero!"); return; }
+    document.getElementById('landingStep1').classList.add('hidden');
+    document.getElementById('landingCreate').classList.remove('hidden');
+}
 
-        if (gameType === 'IMPOSTOR') {
+function showJoinRoomUI() {
+    const name = document.getElementById('playerName').value.trim();
+    if (!name) { alert("¡Escribe tu nombre primero!"); return; }
+    document.getElementById('landingStep1').classList.add('hidden');
+    document.getElementById('landingJoin').classList.remove('hidden');
+}
+
+function resetLandingUI() {
+    document.getElementById('landingStep1').classList.remove('hidden');
+    document.getElementById('landingCreate').classList.add('hidden');
+    document.getElementById('landingJoin').classList.add('hidden');
+}
+
+// REST API calls
+async function createRoom(playerName) { // Called by button click now, will pass global name
+    playerName = document.getElementById('playerName').value.trim(); // Ensure latest name
+    try {
+        const gameMode = document.getElementById('gameModeSelection').value;
+        let url = `/api/rooms/create?playerName=${encodeURIComponent(playerName)}&gameType=${gameMode}`;
+
+        if (gameMode === 'IMPOSTOR') {
             const count = document.getElementById('impostorCount').value;
             const hints = document.getElementById('impostorHints').checked;
+            const showCat = document.getElementById('showCategoryToImpostor').checked;
             const category = document.getElementById('impostorCategory').value;
-            url += `&impostorCount=${count}&hints=${hints}&impostorCategory=${encodeURIComponent(category)}`;
+            url += `&impostorCount=${count}&hints=${hints}&showCategory=${showCat}&impostorCategory=${encodeURIComponent(category)}`;
         } else {
             const packType = document.getElementById('packType').value || "FUTBOL";
             url += `&packType=${packType}`;
         }
 
         const res = await fetch(url, { method: 'POST' });
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText || "Error desconocido en el servidor");
+        }
+
         const room = await res.json();
         currentRoom = room;
         currentPlayer = room.players[0]; // The host
@@ -50,7 +81,9 @@ async function createRoom(playerName) {
     }
 }
 
-async function joinRoom(roomCode, playerName) {
+async function joinRoom(roomCode) {
+    const playerName = document.getElementById('playerName').value.trim();
+    if (!playerName) return; // Should be handled by UI check
     try {
         const res = await fetch(`/api/rooms/join?roomCode=${roomCode}&playerName=${encodeURIComponent(playerName)}`, { method: 'POST' });
         if (!res.ok) throw new Error("No se pudo unir a la sala. Revisa el código.");
@@ -86,13 +119,91 @@ async function startGame() {
     }
 }
 
-async function resetGame() {
+// Variables for Play Again Logic
+let impostorCategoriesCache = [];
+
+async function showPlayAgainModal() {
+    if (currentRoom.gameType === 'IMPOSTOR') {
+        document.getElementById('playAgainModal').classList.remove('hidden');
+
+        // Fetch categories if not already cached
+        try {
+            const res = await fetch('/api/rooms/impostor-categories');
+            if (res.ok) {
+                impostorCategoriesCache = await res.json();
+                const select = document.getElementById('playAgainCategorySelect');
+                select.innerHTML = '<option value="">-- Seleccionar --</option>';
+                impostorCategoriesCache.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.innerText = cat;
+                    select.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error("Error loading categories", e);
+        }
+    } else {
+        // Normal reset for Guess Who
+        resetGame("FUTBOL"); // Default or re-use prompt? For now simple reset.
+    }
+}
+
+async function resetGame(impostorCategoryOverride) {
     try {
-        await fetch(`/api/rooms/${currentRoom.roomCode}/reset`, { method: 'POST' });
+        let url = `/api/rooms/${currentRoom.roomCode}/reset`;
+        const params = new URLSearchParams();
+        if (impostorCategoryOverride) params.append('impostorCategory', impostorCategoryOverride);
+
+        // Add showCategory flag
+        const showCat = document.getElementById('playAgainShowCategory').checked;
+        params.append('showCategory', showCat);
+
+        await fetch(`${url}?${params.toString()}`, { method: 'POST' });
+        document.getElementById('playAgainModal').classList.add('hidden');
     } catch (err) {
         console.error("Error resetting game:", err);
     }
 }
+
+// Event Listeners for Play Again Modal
+document.querySelectorAll('input[name="playAgainOption"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        const select = document.getElementById('playAgainCategorySelect');
+        if (e.target.value === 'CHANGE') {
+            select.disabled = false;
+            select.style.opacity = '1';
+        } else {
+            select.disabled = true;
+            select.style.opacity = '0.5';
+            select.value = "";
+        }
+    });
+});
+
+document.getElementById('btnConfirmPlayAgain').onclick = () => {
+    const option = document.querySelector('input[name="playAgainOption"]:checked').value;
+    let categoryToSend = null;
+
+    if (option === 'KEEP') {
+        categoryToSend = currentRoom.impostorCategoryPreference || "RANDOM";
+    } else if (option === 'RANDOM') {
+        categoryToSend = "RANDOM";
+    } else if (option === 'CHANGE') {
+        const select = document.getElementById('playAgainCategorySelect');
+        if (!select.value) {
+            alert("Por favor selecciona una categoría");
+            return;
+        }
+        categoryToSend = select.value;
+    }
+
+    resetGame(categoryToSend);
+};
+
+document.getElementById('btnCancelPlayAgain').onclick = () => {
+    document.getElementById('playAgainModal').classList.add('hidden');
+};
 
 async function suggestChange(targetPlayerId) {
     try {
@@ -103,9 +214,11 @@ async function suggestChange(targetPlayerId) {
 }
 
 async function accusePlayer(targetPlayerId) {
+    if (isGameOver) return;
+    const targetIdInt = parseInt(targetPlayerId, 10);
     if (!confirm("¿Estás seguro de ACUSAR a este jugador? Tu voto será definitivo.")) return;
     try {
-        const res = await fetch(`/api/rooms/players/${currentPlayer.id}/accuse?targetId=${targetPlayerId}`, { method: 'POST' });
+        const res = await fetch(`/api/rooms/players/${currentPlayer.id}/accuse?targetId=${targetIdInt}`, { method: 'POST' });
         if (res.ok) {
             showNotification("Has votado. Esperando a los demás...");
             // Disable all accuse buttons locally
@@ -233,11 +346,13 @@ function handleGameUpdate(action) {
         const name = action.split(':')[1];
         showNotification(`¡${name} ha acertado! 🎉`);
         hideVotingUI();
+        hidePersistentStatus();
         refreshGameState();
     } else if (action.startsWith('GUESS_VALIDATED_INCORRECT:')) {
         const name = action.split(':')[1];
         showNotification(`${name} falló. ❌`);
         hideVotingUI();
+        hidePersistentStatus();
     } else if (action.startsWith('CHANGE_PROPOSED:')) {
         const parts = action.split(':');
         const targetName = parts[1];
@@ -255,27 +370,27 @@ function handleGameUpdate(action) {
         const name = action.split(':')[1];
         showNotification(`Se ha cambiado la categoría de ${name} 🔄`);
         hideVotingUI();
+        hidePersistentStatus();
         refreshGameState();
     } else if (action.startsWith('VOTE_PROGRESS:')) {
         const parts = action.split(':');
         const count = parts[1];
         const total = parts[2];
-        const label = document.getElementById('votingMsg').querySelector('em') || document.createElement('em');
-        label.style.display = 'block';
-        label.style.fontSize = '0.8rem';
-        label.style.marginTop = '10px';
-        label.innerText = `Progreso: ${count}/${total} votos recibidos`;
-        if (!label.parentNode) document.getElementById('votingMsg').appendChild(label);
+        const type = parts[3];
+
+        showPersistentStatus(`🗳️ Voto en curso (${type}): ${count}/${total}`);
     } else if (action.startsWith('CHANGE_REJECTED:')) {
         const name = action.split(':')[1];
         showNotification(`El cambio para ${name} fue rechazado ❌`);
         hideVotingUI();
+        hidePersistentStatus();
     } else if (action.startsWith('ACCUSE_PROGRESS:')) {
         const parts = action.split(':');
         const count = parts[1];
         const total = parts[2];
-        showNotification(`Votos de acusación: ${count}/${total} 🗳️`);
+        showPersistentStatus(`🕵️ Votos de acusación: ${count}/${total}`);
     } else if (action.startsWith('ACCUSE_RESULT:')) {
+        hidePersistentStatus();
         const parts = action.split(':');
         const type = parts[1];
         const msg = parts[2];
@@ -292,12 +407,16 @@ function handleGameUpdate(action) {
             }
 
             // Re-enable buttons if game continues and I'm active
-            if (!currentPlayer.eliminated) {
-                document.querySelectorAll('.btn-suggest-change').forEach(b => b.disabled = false);
+            if (!currentPlayer.eliminated && !isGameOver) {
+                document.querySelectorAll('.btn-suggest-change').forEach(b => {
+                    b.classList.remove('hidden');
+                    b.disabled = false;
+                });
             }
         } else {
             alert(msg); // Tie
         }
+        refreshGameState();
     } else if (action.startsWith('GAME_OVER:')) {
         const parts = action.split(':');
         const type = parts[1];
@@ -366,12 +485,25 @@ function updatePlayerListUI(players) {
 
 async function initGame() {
     console.log("Initializing Game UI...");
+    isGameOver = false; // Reset game over flag
+
     // Explicitly hide podium and clear state before fetch
     document.getElementById('podiumArea').classList.add('hidden');
     document.getElementById('gameOverOverlay').classList.add('hidden');
     document.getElementById('ejectionOverlay').classList.add('hidden');
     document.getElementById('myStatus').innerText = "Adivinando...";
     document.getElementById('myStatus').classList.remove('guessed-badge');
+
+    // Re-enable guessing button
+    const btnGuess = document.getElementById('btnGuess');
+    if (btnGuess) {
+        btnGuess.classList.remove('hidden');
+        btnGuess.disabled = false;
+    }
+
+    if (currentPlayer && currentPlayer.host) {
+        showNotification("🎨 ¡Nueva partida configurada! La palabra ha cambiado.");
+    }
 
     setTimeout(async () => {
         const res = await fetch(`/api/rooms/${currentRoom.roomCode}/players`);
@@ -418,8 +550,10 @@ async function initGame() {
 
                 if (currentPlayer.eliminated) {
                     secretCard.innerHTML = `
-                        <div style="background: rgba(107, 114, 128, 0.2); border: 2px solid #6b7280; border-radius: 12px; padding: 20px;">
-                            <span style="font-size:3rem;">💀</span>
+                        <div class="secret-card-container" style="border-color: #6b7280; background: rgba(107, 114, 128, 0.1);">
+                            <div class="secret-card-header">Estado</div>
+                            <span class="player-name-display" style="color:#9ca3af !important; -webkit-text-fill-color: initial;">${currentPlayer.name}</span>
+                            <div style="font-size:3rem;">💀</div>
                             <h2 style="color: #9ca3af; margin: 10px 0;">ELIMINADO</h2>
                             <p style="color: #d1d5db;">Has sido expulsado de la nave.</p>
                         </div>
@@ -428,25 +562,38 @@ async function initGame() {
                     document.getElementById('myStatus').className = "player-badge eliminated-badge";
                 } else if (amIImpostor) {
                     secretCard.innerHTML = `
-                        <div style="background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; border-radius: 12px; padding: 20px;">
-                            <span style="font-size:3rem;">🤫</span>
-                            <h2 style="color: #ef4444; margin: 10px 0;">¡ERES EL IMPOSTOR!</h2>
-                            <p style="color: #fca5a5;">Tu objetivo es engañar a los demás y descubrir la palabra secreta.</p>
-                            ${currentPlayer.pendingGuess || currentPlayer.pendingCategory ? `<div style="margin-top:15px; background:rgba(251, 191, 36, 0.1); padding:10px; border-radius:8px; border:1px solid #fbbf24;">
-                                ${currentPlayer.pendingGuess ? `<p style="color:#fbbf24; font-weight:bold; font-size:0.9rem;">PISTA SECRETA</p><p style="color:white; font-style:italic;">"${currentPlayer.pendingGuess}"</p>` : ''}
-                                ${currentPlayer.pendingCategory ? `<p style="color:#fbbf24; font-weight:bold; font-size:0.9rem; margin-top:8px;">CATEGORÍA</p><p style="color:white; font-style:italic;">${currentPlayer.pendingCategory}</p>` : ''}
+                        <div class="secret-card-container role-impostor-bg">
+                             <div class="secret-card-header">Identidad Secreta</div>
+                             <span class="player-name-display">${currentPlayer.name}</span>
+                             <span class="role-badge role-impostor">Impostor</span>
+                             
+                             <div style="margin-top:20px;">
+                                <span style="font-size:3rem;">🤫</span>
+                                <h2 style="color: #ef4444; margin: 10px 0;">¡ERES EL IMPOSTOR!</h2>
+                                <p style="color: #fca5a5;">Tu objetivo es engañar a los demás.</p>
+                             </div>
+                             
+                             ${currentPlayer.pendingGuess || (currentPlayer.pendingCategory && currentRoom.showCategoryToImpostor) ? `<div style="margin-top:20px; background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; border:1px solid #fbbf24;">
+                                ${currentPlayer.pendingGuess ? `<p style="color:#fbbf24; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px;">Pista Secreta</p><p style="color:white; font-size:1.2rem; font-style:italic; margin-bottom:10px;">"${currentPlayer.pendingGuess}"</p>` : ''}
+                                ${(currentPlayer.pendingCategory && currentRoom.showCategoryToImpostor) ? `<p style="color:#fbbf24; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px;">Categoría</p><p style="color:white; font-size:1.1rem;">${currentPlayer.pendingCategory}</p>` : ''}
                             </div>` : ''}
+                            
+                            ${!currentRoom.showCategoryToImpostor ? `<div style="margin-top:10px; font-size:0.8rem; opacity:0.6;">Categoría Oculta</div>` : ''}
                         </div>
                      `;
                 } else {
                     // Regular Player
                     secretCard.innerHTML = `
-                         <div style="background: rgba(16, 185, 129, 0.2); border: 2px solid #10b981; border-radius: 12px; padding: 20px;">
-                            <span style="font-size:3rem;">🛡️</span>
-                            <h2 style="color: #10b981; margin: 10px 0;">NO ERES EL IMPOSTOR</h2>
-                            <p style="color: #a7f3d0;">Palabra Secreta:</p>
-                            <h1 style="color: white; font-size: 2.5rem; text-transform: uppercase; margin: 10px 0; text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);">${currentRoom.currentWord}</h1>
-                            <p style="font-size:0.9rem; color:rgba(255,255,255,0.7);">Categoría: ${currentRoom.currentCategory}</p>
+                         <div class="secret-card-container">
+                            <div class="secret-card-header">Identidad Secreta</div>
+                            <span class="player-name-display">${currentPlayer.name}</span>
+                            <span class="role-badge role-innocent">Inocente</span>
+                            
+                            <div style="margin-top:20px;">
+                                <p style="color: #a7f3d0; text-transform:uppercase; font-size:0.9rem; letter-spacing:1px;">Palabra Secreta</p>
+                                <h1 class="secret-word">${currentRoom.currentWord}</h1>
+                                <p style="font-size:0.9rem; color:rgba(255,255,255,0.7); margin-top:5px;">Categoría: ${currentRoom.currentCategory}</p>
+                            </div>
                          </div>
                      `;
                 }
@@ -457,9 +604,15 @@ async function initGame() {
                 document.querySelector('.notes-area').style.display = 'block'; // Show notes
                 document.getElementById('btnGuess').classList.remove('hidden'); // Show Guess button
                 secretCard.innerHTML = `
-                    <span class="lock-icon">🔒</span>
-                    <p>Tú no sabes qué categoría eres.</p>
-                    <p class="hint">Tus amigos te darán pistas.</p>
+                    <div class="secret-card-container">
+                        <div class="secret-card-header">Tu Identidad</div>
+                        <span class="player-name-display">${currentPlayer.name}</span>
+                        <div style="margin-top:20px;">
+                            <span class="lock-icon" style="font-size:3rem; display:block; margin-bottom:10px;">🔒</span>
+                            <p style="color:#d1d5db; font-size:1.1rem;">No sabes qué categoría eres.</p>
+                            <p class="hint" style="color:var(--primary); margin-top:5px;">Tus amigos te darán pistas.</p>
+                        </div>
+                    </div>
                 `;
                 document.getElementById('myStatus').innerText = "Adivinando...";
             }
@@ -488,17 +641,43 @@ async function refreshGameState() {
         renderPodium();
 
         const me = allPlayers.find(p => p.id === currentPlayer.id);
-        if (me && me.guessed) {
-            const statusLabel = document.getElementById('myStatus');
-            statusLabel.innerText = "¡ADIVINADO!";
-            statusLabel.classList.add('guessed-badge');
-            document.querySelector('.secret-card').innerHTML = `
-                <span class="lock-icon">🏆</span>
-                <p>¡Eras de la categoría: ${me.assignedCharacter ? me.assignedCharacter.name : '??'}!</p>
-            `;
-            document.getElementById('btnGuess').disabled = true;
+        if (me) {
+            currentPlayer = me; // Sync global state
+
+            if (currentPlayer.eliminated) {
+                // Force update UI to eliminated state if it happened
+                updateEliminatedUI();
+            } else if (currentPlayer.guessed) {
+                const statusLabel = document.getElementById('myStatus');
+                statusLabel.innerText = "¡ADIVINADO!";
+                statusLabel.classList.add('guessed-badge');
+                document.querySelector('.secret-card').innerHTML = `
+                    <span class="lock-icon">🏆</span>
+                    <p>¡Eras de la categoría: ${currentPlayer.assignedCharacter ? currentPlayer.assignedCharacter.name : '??'}!</p>
+                `;
+                document.getElementById('btnGuess').disabled = true;
+            }
         }
     }
+}
+
+function updateEliminatedUI() {
+    const secretCard = document.querySelector('.secret-card');
+    secretCard.innerHTML = `
+        <div class="secret-card-container" style="border-color: #6b7280; background: rgba(107, 114, 128, 0.1);">
+            <div class="secret-card-header">Estado</div>
+            <span class="player-name-display" style="color:#9ca3af !important; -webkit-text-fill-color: initial;">${currentPlayer.name}</span>
+            <div style="font-size:3rem;">💀</div>
+            <h2 style="color: #9ca3af; margin: 10px 0;">ELIMINADO</h2>
+            <p style="color: #d1d5db;">Has sido expulsado de la nave.</p>
+        </div>
+    `;
+    document.getElementById('myStatus').innerText = "ELIMINADO";
+    document.getElementById('myStatus').className = "player-badge eliminated-badge";
+    document.getElementById('btnGuess').classList.add('hidden');
+    document.querySelector('.notes-area').style.display = 'none';
+    hideVotingUI();
+    hidePersistentStatus();
 }
 
 function renderOtherPlayers() {
@@ -528,7 +707,9 @@ function renderOtherPlayers() {
                         ${p.guessed ? '✅' : ''}
                     </div>
                 </div>
-                <span class="char-name">${currentRoom.gameType === 'IMPOSTOR' ? '' : (p.assignedCharacter ? p.assignedCharacter.name : 'Asignando...')}</span>
+                <span class="char-name">
+                    ${isEliminated ? '<span style="color:#ef4444; font-size:0.9rem; font-weight:800;">ELIMINADO</span>' : (currentRoom.gameType === 'IMPOSTOR' ? '' : (p.assignedCharacter ? p.assignedCharacter.name : 'Asignando...'))}
+                </span>
             </div>
         `}).join('');
 }
@@ -654,6 +835,7 @@ function showNotification(msg) {
 }
 
 function showVotingUI(name, subtitle, playerId, type) {
+    if (currentPlayer && currentPlayer.eliminated) return; // Eliminated players don't vote
     pendingVoteFor = playerId;
     votingType = type;
     const area = document.getElementById('votingArea');
@@ -672,12 +854,31 @@ function hideVotingUI() {
     if (progressLabel) progressLabel.remove();
 }
 
+function showPersistentStatus(msg) {
+    const el = document.getElementById('persistentVotingStatus');
+    el.innerText = msg;
+    el.classList.remove('hidden');
+}
+
+function hidePersistentStatus() {
+    document.getElementById('persistentVotingStatus').classList.add('hidden');
+}
+
 // Event Listeners
 document.getElementById('btnAddImpostorWord').onclick = addNewImpostorWord;
 document.getElementById('btnAddCategory').onclick = addNewCategory;
 document.getElementById('btnVoteCorrect').onclick = () => submitVote(true);
 document.getElementById('btnVoteIncorrect').onclick = () => submitVote(false);
-document.getElementById('btnResetGame').onclick = resetGame;
+document.getElementById('btnResetGame').onclick = showPlayAgainModal;
+document.getElementById('btnAcceptEjection').onclick = () => {
+    document.getElementById('ejectionOverlay').classList.add('hidden');
+    refreshGameState();
+};
+document.getElementById('btnCreateRoom').onclick = () => createRoom(); // No args needed now
+document.getElementById('btnJoinRoom').onclick = () => {
+    const code = document.getElementById('joinCode').value.trim();
+    joinRoom(code);
+};
 
 async function submitVote(correct) {
     if (!pendingVoteFor) return;
@@ -742,6 +943,7 @@ document.getElementById('btnJoinRoom').onclick = () => {
 document.getElementById('btnStartGame').onclick = startGame;
 
 document.getElementById('btnGuess').onclick = () => {
+    if (currentPlayer && currentPlayer.eliminated) return;
     document.getElementById('guessModal').classList.remove('hidden');
 };
 
@@ -793,16 +995,23 @@ function showEjection() {
     overlay.classList.remove('hidden');
     // Auto hide after animation (optional, or keep until game ends?)
     // Among Us keeps you as ghost. Here we just show the dramatic screen then let you see the game.
-    setTimeout(() => {
-        overlay.classList.add('hidden');
-        showNotification("Ahora eres un espectador fantasma... 👻");
-        refreshGameState();
-    }, 4000);
+    // Timeout removed to keep it fixed on screen
+    // setTimeout(() => {
+    //    overlay.classList.add('hidden');
+    //    showNotification("Ahora eres un espectador fantasma... 👻");
+    //    refreshGameState();
+    // }, 4000);
 }
 
 function showGameOver(title, message, type) {
+    isGameOver = true;
     const overlay = document.getElementById('gameOverOverlay');
     const titleEl = document.getElementById('winnerTitle');
+
+    hideVotingUI();
+    hidePersistentStatus();
+    document.getElementById('btnGuess').classList.add('hidden');
+    document.querySelectorAll('.btn-suggest-change').forEach(b => b.classList.add('hidden'));
 
     titleEl.innerText = title;
     document.getElementById('winnerMessage').innerText = message;

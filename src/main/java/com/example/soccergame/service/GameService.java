@@ -29,23 +29,22 @@ public class GameService {
         private ImpostorWordRepository impostorWordRepository;
 
         @Transactional
-        public GameRoom createRoom(String playerName, String packType, String gameTypeStr, int impostorCount,
-                        boolean hints, String impostorCategory) {
+        public GameRoom createRoom(String playerName, GameRoom.GameType gameType, String packType, int impostorCount,
+                        boolean hints, String impostorCategory, boolean showCategory) {
                 String roomCode = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
                 GameRoom room = new GameRoom();
                 room.setRoomCode(roomCode);
                 room.setStatus(GameRoom.RoomStatus.WAITING);
 
-                GameRoom.GameType type = GameRoom.GameType.GUESS_WHO;
-                if ("IMPOSTOR".equalsIgnoreCase(gameTypeStr)) {
-                        type = GameRoom.GameType.IMPOSTOR;
+                room.setGameType(gameType);
+                if (gameType == GameRoom.GameType.IMPOSTOR) {
                         room.setImpostorCount(impostorCount > 0 ? impostorCount : 1);
                         room.setImpostorHints(hints);
                         room.setImpostorCategoryPreference(impostorCategory);
+                        room.setShowCategoryToImpostor(showCategory);
                 } else {
                         room.setSelectedPack(packType != null ? packType : "FUTBOL");
                 }
-                room.setGameType(type);
 
                 room = roomRepository.save(room);
 
@@ -249,6 +248,12 @@ public class GameService {
         public void submitGuess(Long playerId, String guessName) {
                 GamePlayer player = playerRepository.findById(playerId)
                                 .orElseThrow(() -> new RuntimeException("Player not found"));
+                if (player.getRoom().getStatus() == GameRoom.RoomStatus.FINISHED) {
+                        throw new RuntimeException("Game is over");
+                }
+                if (player.isEliminated()) {
+                        throw new RuntimeException("Eliminated players cannot perform actions");
+                }
                 player.setPendingGuess(guessName);
                 playerRepository.save(player);
 
@@ -260,6 +265,14 @@ public class GameService {
         public void processVote(Long targetId, Long voterId, boolean yes, String type) {
                 GamePlayer target = playerRepository.findById(targetId)
                                 .orElseThrow(() -> new RuntimeException("Target not found"));
+                GamePlayer voter = playerRepository.findById(voterId)
+                                .orElseThrow(() -> new RuntimeException("Voter not found"));
+                if (target.getRoom().getStatus() == GameRoom.RoomStatus.FINISHED) {
+                        throw new RuntimeException("Game is over");
+                }
+                if (voter.isEliminated()) {
+                        throw new RuntimeException("Eliminated players cannot vote");
+                }
                 GameRoom room = target.getRoom();
 
                 // Track the vote
@@ -331,11 +344,17 @@ public class GameService {
         }
 
         @Transactional
-        public void resetGame(String roomCode) {
+        public void resetGame(String roomCode, String impostorCategory, Boolean showCategory) {
                 GameRoom room = roomRepository.findByRoomCode(roomCode)
                                 .orElseThrow(() -> new RuntimeException("Room not found"));
 
                 if (room.getGameType() == GameRoom.GameType.IMPOSTOR) {
+                        if (impostorCategory != null) {
+                                room.setImpostorCategoryPreference(impostorCategory);
+                        }
+                        if (showCategory != null) {
+                                room.setShowCategoryToImpostor(showCategory);
+                        }
                         startImpostorGame(room);
                 } else {
                         startGuessWhoGame(room);
@@ -532,6 +551,9 @@ public class GameService {
                 GamePlayer voter = playerRepository.findById(voterId)
                                 .orElseThrow(() -> new RuntimeException("Voter not found"));
 
+                if (voter.getRoom().getStatus() == GameRoom.RoomStatus.FINISHED) {
+                        throw new RuntimeException("Game is over");
+                }
                 if (voter.isEliminated()) {
                         throw new RuntimeException("Eliminated players cannot vote");
                 }

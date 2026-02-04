@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Categorías de Fútbol</title>
+    <title>Jamm games</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
@@ -16,63 +16,91 @@
         <!-- Pantalla de Inicio -->
         <section id="landing" class="view">
             <div class="glass-card">
-                <h1 class="glow-text">Categorías de Fútbol</h1>
-                <p class="subtitle">¿Quién eres hoy?</p>
+                <h1 class="glow-text">"Mesa"de juegos</h1>
                 <div class="input-group">
                     <input type="text" id="playerName" placeholder="Tu Nombre" maxlength="15">
                 </div>
 
-                <div class="input-group" style="flex-direction: column;">
-                    <label
-                        style="color:white; display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Modo
-                        de Juego</label>
-                    <div class="game-mode-container">
-                        <div class="game-mode-card selected" onclick="selectGameMode('GUESS_WHO', this)">
-                            <span class="game-mode-icon">🕵️‍♂️</span>
-                            <span class="game-mode-title">Adivina Quién</span>
-                        </div>
-                        <div class="game-mode-card impostor-mode" onclick="selectGameMode('IMPOSTOR', this)">
-                            <span class="game-mode-icon">🎭</span>
-                            <span class="game-mode-title">El Impostor</span>
-                        </div>
-                    </div>
-                    <input type="hidden" id="gameModeSelection" value="GUESS_WHO">
+                <!-- Step 1: Choose Action -->
+                <div id="landingStep1" style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="primary-btn" onclick="showCreateRoomUI()" style="flex:1;">Crear Sala</button>
+                    <button class="secondary-btn" onclick="showJoinRoomUI()" style="flex:1;">Unirse</button>
                 </div>
 
-                <!-- Pack Selection (Guess Who) -->
-                <div id="guessWhoConfig" class="input-group" style="margin-top: 10px;">
-                    <label
-                        style="color:white; display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Pack
-                        de Categorías</label>
-                    <select id="packType" class="glass-input"
-                        style="width: 100%; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
-                        <option value="FUTBOL">⚽ Fútbol</option>
-                        <option value="MOVIES">🎬 Películas</option>
-                    </select>
+                <!-- Step 2: Create Room UI -->
+                <div id="landingCreate" class="hidden" style="margin-top:20px;">
+                    <div class="input-group" style="flex-direction: column;">
+                        <label
+                            style="color:white; display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Modo
+                            de Juego</label>
+                        <div class="game-mode-container">
+                            <div class="game-mode-card selected" onclick="selectGameMode('GUESS_WHO', this)">
+                                <span class="game-mode-icon">🕵️‍♂️</span>
+                                <span class="game-mode-title">Adivina Quién</span>
+                            </div>
+                            <div class="game-mode-card impostor-mode" onclick="selectGameMode('IMPOSTOR', this)">
+                                <span class="game-mode-icon">🎭</span>
+                                <span class="game-mode-title">El Impostor</span>
+                            </div>
+                        </div>
+                        <input type="hidden" id="gameModeSelection" value="GUESS_WHO">
+                    </div>
+
+                    <!-- Pack Selection (Guess Who) -->
+                    <div id="guessWhoConfig" class="input-group" style="margin-top: 10px;">
+                        <label
+                            style="color:white; display:block; text-align:left; font-size:0.8rem; margin-bottom:5px;">Pack
+                            de Categorías</label>
+                        <select id="packType" class="glass-input"
+                            style="width: 100%; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
+                            <option value="FUTBOL">⚽ Fútbol</option>
+                            <option value="MOVIES">🎬 Películas</option>
+                        </select>
+                    </div>
+
+                    <!-- Impostor Config -->
+                    <div id="impostorConfig" class="input-group hidden"
+                        style="margin-top: 10px; flex-direction:column;">
+                        <div style="display:flex; gap:10px;">
+                            <input type="number" id="impostorCount" placeholder="# Impostores" value="1" min="1" max="3"
+                                style="flex:1; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
+                            <div
+                                style="flex:1; display:flex; flex-direction:column; gap:5px; color:white; font-size:0.9rem;">
+                                <label style="display:flex; align-items:center;">
+                                    <input type="checkbox" id="impostorHints" style="margin-right:5px;"> Pistas
+                                </label>
+                                <label style="display:flex; align-items:center;"
+                                    title="Si activado, el impostor verá la categoría">
+                                    <input type="checkbox" id="showCategoryToImpostor" checked
+                                        style="margin-right:5px;"> Mostrar Cat.
+                                </label>
+                            </div>
+                        </div>
+                        <select id="impostorCategory" class="glass-input"
+                            style="width: 100%; margin-top:10px; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
+                            <option value="RANDOM">🎲 Aleatorio</option>
+                        </select>
+                    </div>
+
+                    <div class="actions" style="margin-top:20px;">
+                        <button id="btnCreateRoom" class="primary-btn">Comenzar</button>
+                        <button class="secondary-btn" onclick="resetLandingUI()"
+                            style="margin-top:10px; width:100%; background:transparent; border:1px solid rgba(255,255,255,0.3);">Volver</button>
+                    </div>
                 </div>
 
-                <!-- Impostor Config -->
-                <div id="impostorConfig" class="input-group hidden" style="margin-top: 10px; flex-direction:column;">
-                    <div style="display:flex; gap:10px;">
-                        <input type="number" id="impostorCount" placeholder="# Impostores" value="1" min="1" max="3"
-                            style="flex:1; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
-                        <div style="flex:1; display:flex; align-items:center; color:white; font-size:0.9rem;">
-                            <input type="checkbox" id="impostorHints" style="margin-right:5px;"> Pistas
-                        </div>
-                    </div>
-                    <select id="impostorCategory" class="glass-input"
-                        style="width: 100%; margin-top:10px; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white;">
-                        <option value="RANDOM">🎲 Aleatorio</option>
-                    </select>
-                </div>
-                <div class="actions">
-                    <button id="btnCreateRoom" class="primary-btn">Crear Sala</button>
-                    <div class="divider"><span>O unirse a una</span></div>
+                <!-- Step 2: Join Room UI -->
+                <div id="landingJoin" class="hidden" style="margin-top:20px;">
                     <div class="input-group">
                         <input type="text" id="joinCode" placeholder="Cód. de Sala" maxlength="4">
-                        <button id="btnJoinRoom" class="secondary-btn">Unirse</button>
+                    </div>
+                    <div class="actions">
+                        <button id="btnJoinRoom" class="primary-btn">Unirse</button>
+                        <button class="secondary-btn" onclick="resetLandingUI()"
+                            style="margin-top:10px; width:100%; background:transparent; border:1px solid rgba(255,255,255,0.3);">Volver</button>
                     </div>
                 </div>
+
             </div>
         </section>
 
@@ -130,6 +158,7 @@
                 <header class="game-header">
                     <div class="room-info">SALA: <span id="gameRoomCode">----</span></div>
                     <div id="myStatus" class="player-badge">Adivinando...</div>
+                    <div id="persistentVotingStatus" class="voting-progress-area hidden"></div>
                     <button id="btnResetGame" class="secondary-btn hidden">🔄 Volver a Jugar</button>
                 </header>
 
@@ -214,12 +243,63 @@
         </div>
     </div>
 
+    <!-- Modal para Volver a Jugar (Impostor) -->
+    <div id="playAgainModal" class="modal hidden">
+        <div class="modal-content glass-card" style="max-width: 400px;">
+            <h3>Opciones de Nueva Partida</h3>
+            <p style="font-size:0.9rem; margin-bottom:15px; color:#d1d5db;">Configura el siguiente juego:</p>
+
+            <div style="display:flex; flex-direction:column; gap:10px; text-align:left;">
+                <label class="play-option-card">
+                    <input type="radio" name="playAgainOption" value="KEEP" checked>
+                    <div>
+                        <strong style="display:block; color:white;">Mantener categoría actual</strong>
+                    </div>
+                </label>
+                <label class="play-option-card">
+                    <input type="radio" name="playAgainOption" value="RANDOM">
+                    <div>
+                        <strong style="display:block; color:white;">Cambiar a Aleatoria</strong>
+                    </div>
+                </label>
+                <label class="play-option-card">
+                    <input type="radio" name="playAgainOption" value="CHANGE">
+                    <div>
+                        <strong style="display:block; color:white;">Elegir nueva categoría</strong>
+                    </div>
+                </label>
+            </div>
+
+            <select id="playAgainCategorySelect" class="glass-input" disabled
+                style="width: 100%; margin-top:10px; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; opacity: 0.5;">
+                <option value="RANDOM">-- Seleccionar --</option>
+            </select>
+
+            <div style="margin-top:15px; text-align:left;">
+                <label style="display:flex; align-items:center; color:white; font-size:0.9rem;"
+                    title="Si activado, el impostor verá la categoría">
+                    <input type="checkbox" id="playAgainShowCategory" checked style="margin-right:8px;"> Mostrar
+                    Categoría al Impostor
+                </label>
+            </div>
+
+            <div class="modal-buttons" style="margin-top:20px;">
+                <button id="btnConfirmPlayAgain" class="primary-btn">Comenzar</button>
+                <button id="btnCancelPlayAgain" class="cancel-btn">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Overlay de Eliminación -->
     <div id="ejectionOverlay" class="overlay hidden">
         <div class="overlay-content">
             <h1 class="ejected-text">EXPULSADO</h1>
             <p id="ejectionMessage" class="subtext">Nadie te escuchó...</p>
-            <div class="astronaut-animation">👨‍🚀</div>
+            <div class="astronaut-animation" style="margin-bottom: 30px;">👨‍🚀</div>
+            <div>
+                <button id="btnAcceptEjection" class="primary-btn"
+                    style="max-width: 200px; margin: 0 auto;">Aceptar</button>
+            </div>
         </div>
     </div>
 
